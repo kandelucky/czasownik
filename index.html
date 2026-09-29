@@ -142,7 +142,10 @@
   .zadanie.zle { border-color: var(--color-error); background: color-mix(in oklab, var(--color-error) 16%, var(--color-base-100)); }
   .grupy { width: 100%; max-width: 24rem; display: flex; flex-direction: column; gap: 10px; }
   .grupa { display: flex; flex-direction: column; gap: 6px; }
-  .grupa > span { font-size: var(--r-drobny); font-weight: 700; color: var(--blada); }
+  .grupa > span { display: flex; align-items: center; gap: 4px; font-size: var(--r-drobny); font-weight: 700; color: var(--blada); }
+  .grupa .info { color: var(--color-primary); }
+  /* okno ⓘ: ekran lekcji w oknie; bez 🎲 — czasownik ten, który jest teraz */
+  .okno-tresc { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 8px; }
   .rzad { display: flex; gap: 6px; }
   /* flex 1 1 auto: dłuższe słowo („teraźniejszy", „niemęskoosobowy") dostaje szerszy przycisk */
   .opcja { flex: 1 1 auto; height: 44px; padding-inline: 6px; font-size: var(--r-drobny); }
@@ -241,6 +244,17 @@
   </div>
 </div>
 
+<!-- ⓘ okno z ekranem lekcji (Trening, Ćwiczenie); ✕ albo dotknięcie obok — zamyka, wybory zostają -->
+<dialog id="okno" class="modal">
+  <div class="modal-box" id="okno-box">
+    <form method="dialog"><button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" aria-label="Zamknij">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button></form>
+    <div class="okno-tresc" id="okno-tresc"></div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>Zamknij</button></form>
+</dialog>
+
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -318,7 +332,10 @@ const EKRANY = [
         <span class="cichy">liczba mnoga</span>
         <div class="rzad" style="grid-template-columns:1fr 1fr">${kom('CI', 'li', 'męskoosobowy')}${kom('TE', 'ły', 'niemęskoosobowy')}</div>
       </div>
-      <div class="rada"><p><b>męskoosobowy</b> — gdy wśród nich jest chłopiec albo mężczyzna: <i>ci chłopcy ${r}li</i></p></div>`; } },
+      <div class="rada"><span class="znak">Liczba mnoga — zapytaj</span>
+        <p><b>Czy jest wśród nich chłopiec albo mężczyzna?</b></p>
+        <p><b>Tak</b> → męskoosobowy: <i>oni ${r}li</i><br><span class="cichy">chłopcy · mama i tata</span></p>
+        <p><b>Nie</b> → niemęskoosobowy: <i>one ${r}ły</i><br><span class="cichy">dziewczynki · psy · drzewa · dzieci</span></p></div>`; } },
 ];
 let krok = 0;
 
@@ -330,7 +347,7 @@ function pokazEkran() {
   $('lekcja').scrollTop = 0;
   $('dalej').textContent = krok < EKRANY.length - 1 ? 'Dalej' : 'Do ćwiczenia';
   const inny = $('inny');
-  if (inny) inny.onclick = () => { ic = (ic + 1) % LEKCJA_CZ.length; pokazEkran(); };
+  if (inny) inny.onclick = () => { ic = (ic + 1) % LEKCJA_CZ.length; Dzwiek.obrot(); pokazEkran(); };
   simScreen('lekcja ' + (krok + 1));
 }
 $('dalej').onclick = () => { if (krok < EKRANY.length - 1) { krok++; pokazEkran(); } else idz('cw'); };
@@ -368,10 +385,22 @@ const GRUPY = [
   { k: 4, nazwa: 'Czas',   rzedy: [[['prz', 'przeszły'], ['ter', 'teraźniejszy'], ['przy', 'przyszły']]] },
 ];
 // te same przyciski w Ćwiczeniu i w Treningu
-const grupyHtml = () => GRUPY.map(g => `<div class="grupa" data-k="${g.k}"><span>${g.nazwa}</span>
+// ⓘ przy nazwie (Lasha 29.09): okno z ekranem lekcji — Osoba → Osoby, Liczba → Liczby, Rodzaj → Rodzaje, Czas → Czasy
+const EKRAN_GRUPY = { 1: 3, 2: 2, 3: 4, 4: 1 };
+const ikonaInfo = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
+const grupyHtml = () => GRUPY.map(g => `<div class="grupa" data-k="${g.k}"><span>${g.nazwa}
+  <button class="btn btn-ghost btn-circle btn-xs info" data-ekran="${EKRAN_GRUPY[g.k]}" aria-label="Lekcja: ${EKRANY[EKRAN_GRUPY[g.k]].tytul}">${ikonaInfo}</button></span>
   ${g.rzedy.map(r => `<div class="rzad">${r.map(([w, t]) => `<button class="btn opcja" data-w="${w}">${t}</button>`).join('')}</div>`).join('')}
 </div>`).join('');
 $('grupy').innerHTML = grupyHtml();
+function pokazOkno(i) {
+  $('okno-tresc').innerHTML = EKRANY[i].html();
+  $('okno-tresc').querySelector('.inny')?.remove();
+  $('okno').showModal();
+  $('okno-box').scrollTop = 0;
+  log(`ⓘ ${EKRANY[i].tytul}`);
+}
+document.addEventListener('click', e => { const b = e.target.closest('.info'); if (b) pokazOkno(+b.dataset.ekran); });
 
 let zad = null, wybor = {}, sprawdzone = false;
 const ostatnie = [];              // bez powtórek wśród ostatnich 10
@@ -427,7 +456,7 @@ $('cw-sprawdz').onclick = () => {
   if (sprawdzone) {
     if (jedzie) return;
     jedzie = true;
-    Dzwiek.klik();
+    Dzwiek.obrot();
     const el = $('cw-slowo');
     const wyjazd = el.animate([{ transform: 'translateX(0)', opacity: 1 }, { transform: 'translateX(-70px)', opacity: 0 }],
                               { duration: 180, easing: 'ease-in', fill: 'forwards' });
@@ -546,7 +575,7 @@ $('tr-grupy').addEventListener('click', e => {
   trUstaw(b.closest('.grupa').dataset.k, b.dataset.w);
   trPokaz();
 });
-$('tr-inny').onclick = () => { ic = (ic + 1) % LEKCJA_CZ.length; trPoprz = null; trPokaz(); };
+$('tr-inny').onclick = () => { ic = (ic + 1) % LEKCJA_CZ.length; Dzwiek.obrot(); trPoprz = null; trPokaz(); };
 
 // ---- ☰ menu (jak w Zegarze) ----
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -609,7 +638,7 @@ function idz(w) {
 document.querySelectorAll('[data-idz]').forEach(b => b.onclick = () => { if (b.dataset.idz === 'lekcja') krok = 0; idz(b.dataset.idz); });
 $('przycisk-start').onclick = () => idz('start');
 // wstecz (symulator / telefon): w lekcji krok do tyłu, inaczej na Start
-window.simBack = () => { if (widok === 'lekcja' && krok > 0) { krok--; pokazEkran(); } else idz('start'); };
+window.simBack = () => { if ($('okno').open) $('okno').close(); else if (widok === 'lekcja' && krok > 0) { krok--; pokazEkran(); } else idz('start'); };
 
 // ?widok=lekcja&krok=3 · ?widok=tr · ?widok=cw — od razu dany ekran (do zdjęć w symulatorze)
 const q = new URLSearchParams(location.search);

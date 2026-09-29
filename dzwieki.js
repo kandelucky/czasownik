@@ -3,7 +3,9 @@
 //   klik      — każdy przycisk i pozycja menu (sam, niżej); bez „Sprawdź" w Ćwiczeniu — ten ma dobrze / źle
 //   ocena(b)  — dobra / zła odpowiedź po „Sprawdź"
 //   wlacz(b)  — ☰ „Dźwięki", pamiętane w localStorage 'czasownik-dzwieki'
-//   zatrzask · brawo · tik · obrot — z Zegara, tu na razie nieużywane
+//   obrot     — nowy czasownik (Lasha 29.09): Dalej w Ćwiczeniu, 🎲 w Treningu i w lekcji — zamiast klik
+//   brawo     — co 5 dobrych z rzędu w Ćwiczeniu
+//   zatrzask · tik — z Zegara, tu nieużywane
 (function () {
   "use strict";
   let wlaczone = true;
@@ -104,6 +106,6 @@
     if (!wlaczone) return;
     ac();                                    // pierwsze dotknięcie budzi AudioContext — tik działa od pierwszego ruchu
     const b = e.target.closest('button, a, label.btn, summary');
-    if (b && !b.closest('#cw-sprawdz')) Dzwiek.klik();
+    if (b && !b.closest('#cw-sprawdz, #tr-inny, #inny')) Dzwiek.klik();
   });
 })();
