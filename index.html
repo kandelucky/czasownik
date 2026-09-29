@@ -74,6 +74,7 @@
 
   /* nagłówek: licznik kroków lekcji */
   .kroki { font-size: var(--r-drobny); font-weight: 700; color: var(--blada); margin-right: 4px; }
+  .seria { display: inline-block; font-size: var(--r-przycisk); font-weight: 800; color: var(--color-warning); margin-right: 4px; }
 
   /* ---- lekcja ---- */
   #lekcja { justify-content: safe center; }
@@ -151,6 +152,9 @@
   .opcja:disabled { opacity: 1; }
   .opcja.btn-success:disabled, .opcja.btn-error:disabled { background: var(--btn-color); color: var(--btn-fg); border-color: var(--btn-color); }
   #cw-sprawdz { font-size: var(--r-przycisk); }
+  #cw-karta { overflow: hidden; }   /* czasownik wjeżdża z prawej, wyjeżdża w lewo — nie wystaje poza kartę */
+  /* gwiazdki z karty po dobrej odpowiedzi — fixed, na body: nie przewijają ekranu */
+  .gwiazda { position: fixed; z-index: 50; pointer-events: none; line-height: 1; color: var(--color-warning); }
 
   /* ---- trening ---- karta stałej wysokości (czas przyszły = dwa wiersze), przyciski nie skaczą */
   .tr-karta { min-height: 132px; justify-content: center; gap: 0; }
@@ -158,6 +162,10 @@
   .tr-karta > small { font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
   .zaim { font-weight: 500; color: var(--blada); }
   .grupa.blada .rzad { opacity: .45; }
+  /* zmieniona część czasownika: kolor + podskok (Lasha 29.09, pomysł 1) */
+  .zmiana { display: inline-block; white-space: pre; color: color-mix(in oklab, var(--color-accent) 80%, var(--color-base-content));
+            animation: podskok .4s ease-out; }
+  @keyframes podskok { 0% { transform: scale(.5); opacity: 0; } 60% { transform: scale(1.25); opacity: 1; } 100% { transform: scale(1); } }
 </style>
 </head>
 <body>
@@ -172,6 +180,8 @@
     </label>
     <span class="text-lg font-bold mr-auto" id="tytul">Czasownik</span>
     <span class="kroki" id="kroki" hidden></span>
+    <!-- ★ seria w Ćwiczeniu: dobre odpowiedzi z rzędu; zła — od zera -->
+    <span class="seria" id="seria" hidden></span>
     <!-- 🏠 jak w Zegarze: jednym dotknięciem na Start; na Starcie ukryty -->
     <button id="przycisk-start" class="btn btn-ghost btn-square" aria-label="Start" hidden>
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
@@ -388,8 +398,47 @@ $('grupy').addEventListener('click', e => {
   $('cw-sprawdz').disabled = Object.keys(wybor).length < GRUPY.length;
 });
 
+// ---- ćwiczenie: animacje (Lasha 29.09, „ყველა") ----
+// dobrze — karta podskakuje, z niej gwiazdki, „Dobrze!" wyskakuje · źle — karta kręci „nie", dobre przyciski raz pulsują ·
+// Dalej — stary czasownik w lewo, nowy z prawej · ★ seria w nagłówku, co 5 z rzędu więcej gwiazdek i „brawo"
+let seria = 0, jedzie = false;
+function gwiazdki(el, ile, zasieg) {
+  const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+  for (let i = 0; i < ile; i++) {
+    const g = h('span', 'gwiazda', '★'), kat = Math.random() * 2 * Math.PI, d = zasieg * (.5 + Math.random() * .5);
+    const dx = Math.cos(kat) * d, dy = Math.sin(kat) * d, obr = Math.random() * 360 - 180;
+    g.style.left = x + 'px'; g.style.top = y + 'px';
+    g.style.fontSize = (14 + Math.random() * 16) + 'px';
+    if (i % 3 === 0) g.style.color = 'var(--color-accent)';
+    document.body.append(g);
+    g.animate([
+      { transform: 'translate(-50%, -50%) scale(.3)', opacity: 1 },
+      { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(1) rotate(${obr}deg)`, opacity: 1, offset: .6 },
+      { transform: `translate(calc(-50% + ${dx * 1.15}px), calc(-50% + ${dy * 1.15 + 30}px)) scale(.8) rotate(${obr * 1.3}deg)`, opacity: 0 },
+    ], { duration: 900 + Math.random() * 300, easing: 'cubic-bezier(.2, .7, .3, 1)' }).finished.then(() => g.remove());
+  }
+}
+function pokazSerie() {
+  $('seria').hidden = widok !== 'cw' || seria === 0;
+  $('seria').textContent = `★ ${seria}`;
+}
+
 $('cw-sprawdz').onclick = () => {
-  if (sprawdzone) { Dzwiek.klik(); noweZadanie(); return; }
+  if (sprawdzone) {
+    if (jedzie) return;
+    jedzie = true;
+    Dzwiek.klik();
+    const el = $('cw-slowo');
+    const wyjazd = el.animate([{ transform: 'translateX(0)', opacity: 1 }, { transform: 'translateX(-70px)', opacity: 0 }],
+                              { duration: 180, easing: 'ease-in', fill: 'forwards' });
+    wyjazd.finished.then(() => {
+      noweZadanie();
+      wyjazd.cancel();
+      el.animate([{ transform: 'translateX(70px)', opacity: 0 }, { transform: 'translateX(0)', opacity: 1 }], { duration: 250, easing: 'ease-out' });
+      jedzie = false;
+    });
+    return;
+  }
   sprawdzone = true;
   let wszystko = true;
   $('grupy').querySelectorAll('.grupa').forEach(g => {
@@ -405,6 +454,23 @@ $('cw-sprawdz').onclick = () => {
   $('cw-karta').classList.add(wszystko ? 'dobrze' : 'zle');
   Dzwiek.ocena(wszystko);
   $('cw-podpis').textContent = wszystko ? 'Dobrze!' : 'Popatrz, tak jest dobrze:';
+  if (wszystko) {
+    seria++;
+    pokazSerie();
+    $('seria').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.5)' }, { transform: 'scale(1)' }], { duration: 400, easing: 'ease-out' });
+    $('cw-karta').animate([{ transform: 'none' }, { transform: 'translateY(-8px) scale(1.06)' }, { transform: 'scale(.98)' }, { transform: 'none' }],
+                          { duration: 450, easing: 'ease-out' });
+    $('cw-podpis').animate([{ transform: 'scale(.5)', opacity: 0 }, { transform: 'scale(1.3)', opacity: 1, offset: .6 }, { transform: 'scale(1)' }],
+                           { duration: 400, easing: 'ease-out' });
+    if (seria % 5 === 0) { gwiazdki($('cw-karta'), 36, 170); setTimeout(Dzwiek.brawo, 350); }
+    else gwiazdki($('cw-karta'), 14, 110);
+  } else {
+    seria = 0;
+    pokazSerie();
+    $('cw-karta').animate([0, -12, 10, -8, 6, -3, 0].map(x => ({ transform: `translateX(${x}px)` })), { duration: 450, easing: 'ease-out' });
+    $('grupy').querySelectorAll('.btn-success').forEach(b =>
+      b.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 500, delay: 300, easing: 'ease-in-out' }));
+  }
   $('cw-sprawdz').textContent = 'Dalej';
   log(`${zad[0]}: ${wszystko ? 'dobrze' : 'źle'}`);
 };
@@ -447,17 +513,31 @@ function trUstaw(k, w) {
   if (tr.rodz === 'n' && tr.os !== 3) tr.rodz = 'm';                   // nie ma „ja robiłom"
 }
 
+// zmieniona część czasownika (Lasha 29.09, pomysł 1): wspólny początek i koniec zostają, środek świeci —
+// robiłem → robiłam: „a"; robię → zrobię: „z"; będę robił → będziesz robił: „ziesz"
+let trPoprz = null;               // formy pokazane poprzednio; null = nic nie świeci (wejście, 🎲)
+function roznica(stare, nowe) {
+  if (stare == null || stare === nowe) return [nowe, '', ''];
+  let a = 0, b = 0;
+  while (a < stare.length && a < nowe.length && stare[a] === nowe[a]) a++;
+  while (b < stare.length - a && b < nowe.length - a && stare[stare.length - 1 - b] === nowe[nowe.length - 1 - b]) b++;
+  return [nowe.slice(0, a), nowe.slice(a, nowe.length - b), nowe.slice(nowe.length - b)];
+}
+
 function trPokaz() {
   const f = trFormy(), wyb = { 1: tr.os + tr.lp, 2: tr.lp, 3: tr.rodz, 4: tr.czas };
   $('tr-grupy').querySelectorAll('.grupa').forEach(g =>
     g.querySelectorAll('.opcja').forEach(b => b.classList.toggle('btn-neutral', b.dataset.w === wyb[g.dataset.k])));
   $('tr-grupy').querySelector('[data-k="3"] [data-w="n"]').disabled = tr.os !== 3;
   $('tr-grupy').querySelector('[data-k="3"]').classList.toggle('blada', tr.czas === 'ter');   // w teraźniejszym rodzaju nie widać
-  const linia = forma => `<b><span class="zaim">${f.zaimek}</span> ${forma}</b>`;
+  const formy = tr.czas === 'przy' ? [f.prosty, f.zlozony] : [tr.czas === 'prz' ? f.przesz : f.ter];
+  const linia = i => {
+    const [pocz, srodek, kon] = roznica(trPoprz && (trPoprz[i] ?? trPoprz[0]), formy[i]);
+    return `<b><span class="zaim">${f.zaimek}</span> ${pocz}${srodek ? `<span class="zmiana">${srodek}</span>` : ''}${kon}</b>`;
+  };
   $('tr-karta').classList.toggle('dwa', tr.czas === 'przy');
-  $('tr-karta').innerHTML = tr.czas === 'przy'
-    ? `<small>prosty</small>${linia(f.prosty)}<small>złożony</small>${linia(f.zlozony)}`
-    : linia(tr.czas === 'prz' ? f.przesz : f.ter);
+  $('tr-karta').innerHTML = tr.czas === 'przy' ? `<small>prosty</small>${linia(0)}<small>złożony</small>${linia(1)}` : linia(0);
+  trPoprz = formy;
   $('tr-inny').innerHTML = `${V().bezok} ${kosc}`;
 }
 $('tr-grupy').addEventListener('click', e => {
@@ -466,7 +546,7 @@ $('tr-grupy').addEventListener('click', e => {
   trUstaw(b.closest('.grupa').dataset.k, b.dataset.w);
   trPokaz();
 });
-$('tr-inny').onclick = () => { ic = (ic + 1) % LEKCJA_CZ.length; trPokaz(); };
+$('tr-inny').onclick = () => { ic = (ic + 1) % LEKCJA_CZ.length; trPoprz = null; trPokaz(); };
 
 // ---- ☰ menu (jak w Zegarze) ----
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -520,10 +600,11 @@ function idz(w) {
   $('przycisk-start').hidden = w === 'start';
   $('kroki').hidden = w !== 'lekcja';
   zbudujMenu();
+  if (w !== 'cw') $('seria').hidden = true;
   if (w === 'start') { $('tytul').textContent = 'Czasownik'; simScreen('start'); }
   if (w === 'lekcja') pokazEkran();
-  if (w === 'tr') { $('tytul').textContent = 'Trening'; trPokaz(); simScreen('trening'); }
-  if (w === 'cw') { $('tytul').textContent = 'Ćwiczenie'; noweZadanie(); simScreen('ćwiczenie'); }
+  if (w === 'tr') { $('tytul').textContent = 'Trening'; trPoprz = null; trPokaz(); simScreen('trening'); }
+  if (w === 'cw') { $('tytul').textContent = 'Ćwiczenie'; seria = 0; pokazSerie(); noweZadanie(); simScreen('ćwiczenie'); }
 }
 document.querySelectorAll('[data-idz]').forEach(b => b.onclick = () => { if (b.dataset.idz === 'lekcja') krok = 0; idz(b.dataset.idz); });
 $('przycisk-start').onclick = () => idz('start');
