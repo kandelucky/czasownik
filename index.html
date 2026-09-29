@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="szkola-krem" class="h-full">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Czasownik</title>
+<!-- motywy jak w Zegarze: daisyUI + szkola-krem · szkola-blekit · szkola-noc (theme-dzieci.css) -->
+<link rel="stylesheet" href="lib/daisyui.css">
+<link rel="stylesheet" href="lib/daisyui-themes.css">
+<link rel="stylesheet" href="theme-dzieci.css">
+<script>
+  // Motyw z ☰ (jak w Zegarze) — zapisany wybór ustawiony przed rysowaniem, żeby nie mignął kremowy.
+  // Klucz ten sam, co w symulatorze (sim.html: KEY + "-theme") — jego wybór motywu i ten z ☰ to jedno.
+  const MOTYWY = [['szkola-krem', 'Kremowy'], ['szkola-blekit', 'Błękitny'], ['szkola-noc', 'Nocny']];
+  try { const m = localStorage.getItem('czasownik-theme'); if (MOTYWY.some(([k]) => k === m)) document.documentElement.dataset.theme = m; } catch (e) {}
+</script>
+<script src="lib/tailwind.js"></script>
+<script src="sim-bridge.js"></script>
+<script src="dzwieki.js"></script>
+<style type="text/tailwindcss">
+  @theme reference {
+    --color-base-100: var(--color-base-100); --color-base-200: var(--color-base-200); --color-base-300: var(--color-base-300);
+    --color-base-content: var(--color-base-content);
+    --color-primary: var(--color-primary); --color-primary-content: var(--color-primary-content);
+    --color-secondary: var(--color-secondary); --color-secondary-content: var(--color-secondary-content);
+    --color-accent: var(--color-accent); --color-accent-content: var(--color-accent-content);
+    --color-neutral: var(--color-neutral); --color-neutral-content: var(--color-neutral-content);
+    --color-info: var(--color-info); --color-success: var(--color-success);
+    --color-warning: var(--color-warning); --color-error: var(--color-error);
+  }
+</style>
+<style>
+  html, body { margin: 0; height: 100%; }
+  [hidden] { display: none !important; }
+  body {
+    background: var(--color-base-200);
+    color: var(--color-base-content);
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+    user-select: none; -webkit-user-select: none;
+    /* rozmiary tekstu — ten sam standard co w Zegarze: każdy napis ma jeden z trzech */
+    --r-glowny: 32px; --r-przycisk: 22px; --r-drobny: 17px;
+    --blada: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    /* pomarańczowe plamy z podręcznika — tu bursztyn motywu, rozjaśniony */
+    --plama: color-mix(in oklab, var(--color-accent) 24%, var(--color-base-100));
+  }
+
+  /* Start: tytuł z podręcznika, pod nim dwa kafle (jak lista w Zegarze) */
+  .start-tytul { margin: 1rem 0 .5rem; text-align: center; font-size: var(--r-glowny); font-weight: 800; line-height: 1.1; }
+  .start-tytul small { display: block; margin-top: .3rem; font-size: var(--r-przycisk); font-weight: 600; color: var(--blada); }
+  .lista-kafel { --kolor: var(--color-warning); --kolor-t: var(--color-warning-content);
+                 flex: none; height: 88px; display: flex; align-items: center; gap: 14px; width: 100%; padding: 0 12px 0 14px;
+                 text-align: left; cursor: pointer; background: var(--color-base-100); border: 0; border-radius: var(--radius-box, 1rem);
+                 color: inherit; font: inherit; transition: transform .1s; }
+  .lista-kafel.lekcje { --kolor: var(--color-success); --kolor-t: var(--color-success-content); }
+  .lista-kafel.trening { --kolor: var(--color-info); --kolor-t: var(--color-info-content); }
+  .lista-kafel:active { transform: scale(.97); }
+  .kafel-ikona { flex: none; width: 60px; height: 60px; border-radius: 14px; display: grid; place-items: center;
+                 background: var(--kolor); color: var(--kolor-t); }
+  .lista-kafel .tekst { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .lista-kafel b { font-size: var(--r-przycisk); line-height: 1.15; white-space: nowrap; }
+  /* opis może zająć dwa wiersze — „Czasy · liczby · osoby · rodzaje" nie mieści się w jednym */
+  .lista-kafel small { font-size: var(--r-drobny); line-height: 1.2; color: var(--blada); }
+  .lista-kafel > svg { flex: none; color: var(--kolor); }
+
+  /* ☰ (jak w Zegarze): Motyw i Dźwięki pod kreską; próbka = tło motywu + jego główny kolor */
+  .menu li.oddzielnie { margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--color-base-300); }
+  .probka { width: 22px; height: 22px; flex: none; border-radius: 50%;
+            background: linear-gradient(135deg, var(--color-base-100) 50%, var(--color-primary) 50%);
+            box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-base-content) 35%, transparent); }
+  .ustaw-grupa { display: flex; flex-direction: column; gap: 6px; padding: .5rem 1rem; }
+  .ustaw-grupa > span { font-size: 14px; font-weight: 600; color: var(--blada); }
+  .ustaw-grupa .join { width: 100%; }
+  .ustaw-grupa .btn { flex: 1; }
+
+  /* nagłówek: licznik kroków lekcji */
+  .kroki { font-size: var(--r-drobny); font-weight: 700; color: var(--blada); margin-right: 4px; }
+
+  /* ---- lekcja ---- */
+  #lekcja { justify-content: safe center; }
+  #widok-lekcja .btn { font-size: var(--r-przycisk); }
+  .lek-przez { margin: 0; text-align: center; font-size: var(--r-drobny); font-weight: 700; color: var(--blada); }
+  .lek-temat { margin: -4px 0 0; font-size: var(--r-glowny); font-weight: 800; letter-spacing: .14em; line-height: 1.2;
+               background: linear-gradient(transparent 62%, var(--plama) 62%); padding: 0 .15em; }
+  .wstep { margin: 0; text-align: center; font-size: var(--r-drobny); line-height: 1.35; max-width: 24rem; }
+  .rada { width: 100%; max-width: 24rem; background: var(--color-base-100); border-radius: var(--radius-box, 1rem);
+          padding: .5rem 1rem; text-align: center; font-size: var(--r-drobny); line-height: 1.35; }
+  .rada p { margin: 0; }
+  .rada p + p { margin-top: .35rem; }
+  .znak { display: block; font-size: var(--r-drobny); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--color-primary); }
+  /* 🎲 inny czasownik — ten sam na wszystkich ekranach lekcji */
+  .inny { display: flex; align-items: center; gap: 8px; font-size: var(--r-drobny); color: var(--blada); }
+  .inny .btn { font-size: var(--r-przycisk); gap: 8px; }
+  /* dymek — to, co mówi stworek w podręczniku */
+  .dymek { display: inline-block; background: var(--color-base-100); border: 2px solid color-mix(in oklab, var(--color-base-content) 55%, transparent);
+           border-radius: 1.1em; padding: .15em .6em; font-weight: 700; font-size: var(--r-przycisk); line-height: 1.2; text-align: center; }
+  .plama { background: var(--plama); border-radius: 1.4rem; }
+  .etykieta { font-size: 14px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .cichy { font-size: 14px; color: var(--blada); }
+
+  /* Zacznijmy od… */
+  .slowa3 { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .przez4 { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .przez4 span { padding: .2em .6em; border-radius: 999px; background: var(--plama); font-weight: 800; letter-spacing: .08em; }
+
+  /* Czasy: trzy plamy na strzałce czasu, jak w podręczniku */
+  .czasy { width: 100%; max-width: 24rem; display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 4px; align-items: end; }
+  .czasy > div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; padding: 10px 2px; min-height: 100%; }
+  .czasy .dymek { font-size: 17px; padding: .15em .45em; }
+  .czasy .cichy { font-size: 12px; line-height: 1.1; text-align: center; }
+  .os { position: relative; width: 100%; max-width: 24rem; height: 14px; }
+  .os::before { content: ''; position: absolute; left: 0; right: 10px; top: 5px; height: 4px; border-radius: 2px; background: var(--color-base-content); }
+  .os::after { content: ''; position: absolute; right: 0; top: 0; border: 7px solid transparent; border-left: 12px solid var(--color-base-content); border-right: 0; }
+  .os i { position: absolute; top: 0; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--color-base-content); }
+  .czasy-nazwy { width: 100%; max-width: 24rem; display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 4px; text-align: center; }
+  .czasy-nazwy .etykieta { font-size: 13px; letter-spacing: .04em; }
+
+  /* Liczby */
+  .liczby { width: 100%; max-width: 24rem; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .liczby > div { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 6px 12px; }
+
+  /* Osoby: 3 wiersze, liczba pojedyncza | liczba mnoga; bez numerów 1. 2. 3. (Lasha 29.09) */
+  .osoby { width: 100%; max-width: 24rem; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 6px; align-items: stretch; }
+  .osoby .glowa { text-align: center; font-size: 13px; font-weight: 700; color: var(--blada); }
+  .osoby .kom { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; }
+
+  /* Rodzaje */
+  .rodzaje { width: 100%; max-width: 24rem; display: flex; flex-direction: column; gap: 8px; }
+  .rodzaje .rzad { display: grid; gap: 6px; }
+  .rodzaje .kom { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 2px; }
+  .rodzaje .dymek { font-size: 18px; padding: .12em .45em; }
+  .rodzaje .etykieta { font-size: 11px; letter-spacing: .03em; }
+  .zaimek { font-size: var(--r-przycisk); font-weight: 800; letter-spacing: .06em; }
+
+  /* ---- ćwiczenie ---- */
+  .zadanie { width: 100%; max-width: 24rem; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 12px 14px;
+             text-align: center; background: var(--color-base-100); border: 1px solid var(--color-base-300);
+             border-radius: var(--radius-box, 1rem); box-shadow: 0 4px 14px rgb(0 0 0 / .12); transition: background-color .2s, border-color .2s; }
+  .zadanie > small { font-size: var(--r-drobny); font-weight: 600; color: var(--blada); }
+  .zadanie > b { font-size: var(--r-glowny); line-height: 1.2; }
+  .zadanie.dobrze { border-color: var(--color-success); background: color-mix(in oklab, var(--color-success) 22%, var(--color-base-100)); }
+  .zadanie.zle { border-color: var(--color-error); background: color-mix(in oklab, var(--color-error) 16%, var(--color-base-100)); }
+  .grupy { width: 100%; max-width: 24rem; display: flex; flex-direction: column; gap: 10px; }
+  .grupa { display: flex; flex-direction: column; gap: 6px; }
+  .grupa > span { font-size: var(--r-drobny); font-weight: 700; color: var(--blada); }
+  .rzad { display: flex; gap: 6px; }
+  /* flex 1 1 auto: dłuższe słowo („teraźniejszy", „niemęskoosobowy") dostaje szerszy przycisk */
+  .opcja { flex: 1 1 auto; height: 44px; padding-inline: 6px; font-size: var(--r-drobny); }
+  /* osoba: dwa wiersze zaimków, kolumny równo pod sobą (ja nad my, on, ona, ono nad oni, one) */
+  .grupa[data-k="1"] .rzad { display: grid; grid-template-columns: 1fr 1fr 1.8fr; }
+  .opcja:not(.btn-neutral, .btn-success, .btn-error) { --btn-color: var(--color-base-100); }
+  .opcja:disabled { opacity: 1; }
+  .opcja.btn-success:disabled, .opcja.btn-error:disabled { background: var(--btn-color); color: var(--btn-fg); border-color: var(--btn-color); }
+  #cw-sprawdz { font-size: var(--r-przycisk); }
+
+  /* ---- trening ---- karta stałej wysokości (czas przyszły = dwa wiersze), przyciski nie skaczą */
+  .tr-karta { min-height: 132px; justify-content: center; gap: 0; }
+  .tr-karta.dwa > b { font-size: 26px; }
+  .tr-karta > small { font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+  .zaim { font-weight: 500; color: var(--blada); }
+  .grupa.blada .rzad { opacity: .45; }
+</style>
+</head>
+<body>
+
+<div class="drawer h-full">
+  <input id="menu" type="checkbox" class="drawer-toggle">
+
+  <div class="drawer-content h-full min-h-0 flex flex-col">
+  <header class="flex items-center gap-1 px-2 h-14 shrink-0">
+    <label for="menu" class="btn btn-ghost btn-square" aria-label="Menu">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </label>
+    <span class="text-lg font-bold mr-auto" id="tytul">Czasownik</span>
+    <span class="kroki" id="kroki" hidden></span>
+    <!-- 🏠 jak w Zegarze: jednym dotknięciem na Start; na Starcie ukryty -->
+    <button id="przycisk-start" class="btn btn-ghost btn-square" aria-label="Start" hidden>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+    </button>
+  </header>
+
+  <!-- Start: Lekcja · Ćwiczenie (podręcznik: „12–13. Misja odmiana! Tajemnice czasownika") -->
+  <main id="widok-start" class="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 px-4 pt-2 pb-4" hidden>
+    <p class="start-tytul">Misja odmiana!<small>Tajemnice czasownika</small></p>
+    <button class="lista-kafel lekcje" data-idz="lekcja">
+      <span class="kafel-ikona"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>
+      <span class="tekst"><b>Lekcja</b><small>Czasy · liczby · osoby · rodzaje</small></span>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <button class="lista-kafel trening" data-idz="tr">
+      <span class="kafel-ikona"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.596 12.768a2 2 0 1 0 2.829-2.829l-1.768-1.767a2 2 0 0 0 2.828-2.829l-2.828-2.828a2 2 0 0 0-2.829 2.828l-1.767-1.768a2 2 0 1 0-2.829 2.829z"/><path d="m2.5 21.5 1.4-1.4"/><path d="m20.1 3.9 1.4-1.4"/><path d="M5.343 21.485a2 2 0 1 0 2.829-2.828l1.767 1.768a2 2 0 1 0 2.829-2.829l-6.364-6.364a2 2 0 1 0-2.829 2.829l1.768 1.767a2 2 0 0 0-2.828 2.829z"/><path d="m9.6 14.4 4.8-4.8"/></svg></span>
+      <span class="tekst"><b>Trening</b><small>Dotknij — czasownik się zmieni</small></span>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <button class="lista-kafel" data-idz="cw">
+      <span class="kafel-ikona"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></span>
+      <span class="tekst"><b>Ćwiczenie</b><small>Określ formę czasownika</small></span>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+  </main>
+
+  <main id="widok-lekcja" class="flex-1 min-h-0 flex flex-col px-4 pb-4" hidden>
+    <div id="lekcja" class="flex-1 min-h-0 overflow-y-auto flex flex-col items-center gap-3 py-2"></div>
+    <button id="dalej" class="btn btn-primary w-full shrink-0 mt-2">Dalej</button>
+  </main>
+
+  <!-- Trening (Lasha 29.09): te same przyciski co w Ćwiczeniu, czasownik zmienia się od razu -->
+  <main id="widok-tr" class="flex-1 min-h-0 overflow-y-auto flex flex-col items-center gap-3 px-4 pt-2 pb-4" hidden>
+    <div class="inny">Czasownik: <button class="btn btn-sm btn-outline rounded-full" id="tr-inny"></button></div>
+    <div class="zadanie tr-karta" id="tr-karta"></div>
+    <div class="grupy" id="tr-grupy"></div>
+  </main>
+
+  <!-- Ćwiczenie (podręcznik, zad. 2): jeden czasownik, pod nim osoba · liczba · rodzaj · czas, „Sprawdź" -->
+  <main id="widok-cw" class="flex-1 min-h-0 overflow-y-auto flex flex-col items-center gap-3 px-4 pt-2 pb-4" hidden>
+    <div class="zadanie" id="cw-karta">
+      <small id="cw-podpis">Określ formę czasownika</small>
+      <b id="cw-slowo"></b>
+    </div>
+    <div class="grupy" id="grupy"></div>
+    <button id="cw-sprawdz" class="btn btn-primary w-full max-w-sm shrink-0">Sprawdź</button>
+  </main>
+  </div>
+
+  <!-- ☰ (jak w Zegarze): Start · Lekcja · Trening · Ćwiczenie · Motyw; pod spodem Dźwięki -->
+  <div class="drawer-side z-10">
+    <label for="menu" aria-label="Zamknij menu" class="drawer-overlay"></label>
+    <nav class="bg-base-100 min-h-full w-72 py-3">
+      <ul class="menu w-full text-base" id="menu-nawigacja"></ul>
+      <div class="ustaw-grupa"><span>Dźwięki</span><div class="join" id="u-dzwieki"></div></div>
+    </nav>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+// ---- czasowniki w lekcji (🎲 zmienia je na wszystkich ekranach naraz) ----
+// ter: czas teraźniejszy ja · ty · on · my · wy · oni; rdzen + ł / ła / ło / li / ły = czas przeszły dokonany (Rodzaje)
+const LEKCJA_CZ = [
+  { bezok: 'robić',   ter: ['robię', 'robisz', 'robi', 'robimy', 'robicie', 'robią'],
+    przesz: 'robiłem', prosty: 'zrobię', zlozony: 'będę robić', rdzen: 'zrobi' },
+  { bezok: 'pisać',   ter: ['piszę', 'piszesz', 'pisze', 'piszemy', 'piszecie', 'piszą'],
+    przesz: 'pisałem', prosty: 'napiszę', zlozony: 'będę pisać', rdzen: 'napisa' },
+  { bezok: 'czytać',  ter: ['czytam', 'czytasz', 'czyta', 'czytamy', 'czytacie', 'czytają'],
+    przesz: 'czytałem', prosty: 'przeczytam', zlozony: 'będę czytać', rdzen: 'przeczyta' },
+  { bezok: 'śpiewać', ter: ['śpiewam', 'śpiewasz', 'śpiewa', 'śpiewamy', 'śpiewacie', 'śpiewają'],
+    przesz: 'śpiewałem', prosty: 'zaśpiewam', zlozony: 'będę śpiewać', rdzen: 'zaśpiewa' },
+  { bezok: 'rysować', ter: ['rysuję', 'rysujesz', 'rysuje', 'rysujemy', 'rysujecie', 'rysują'],
+    przesz: 'rysowałem', prosty: 'narysuję', zlozony: 'będę rysować', rdzen: 'narysowa' },
+];
+let ic = 0;                       // który czasownik z LEKCJA_CZ
+const V = () => LEKCJA_CZ[ic];
+
+// ---- lekcja: 5 ekranów w kolejności podręcznika ----
+const kosc = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><g fill="currentColor" stroke="none"><circle cx="8" cy="8" r="1.5"/><circle cx="16" cy="8" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="8" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></g></svg>';
+const naglowek = temat => `<p class="lek-przez">Czasownik odmienia się przez</p><p class="lek-temat">${temat}</p>
+  <div class="inny">Czasownik: <button class="btn btn-sm btn-outline rounded-full" id="inny">${V().bezok} ${kosc}</button></div>`;
+
+const EKRANY = [
+  { tytul: 'Zacznijmy od…', html: () => `
+      <p class="wstep">Przyjrzyj się, czym różnią się te czasowniki:</p>
+      <div class="slowa3"><span class="dymek">czyta</span><span class="dymek">czytam</span><span class="dymek">przeczytaliśmy</span></div>
+      <div class="rada"><span class="znak">Zapamiętaj</span>
+        <p>Czasownik należy do <b>odmiennych części mowy</b>, co oznacza, że zmienia swoją formę.</p></div>
+      <p class="wstep">Czasownik odmienia się przez:</p>
+      <div class="przez4"><span>CZASY</span><span>LICZBY</span><span>OSOBY</span><span>RODZAJE</span></div>` },
+
+  { tytul: 'Czasy', html: () => `${naglowek('CZASY')}
+      <div class="czasy">
+        <div class="plama"><span class="dymek">${V().przesz}</span></div>
+        <div class="plama"><span class="dymek">${V().ter[0]}</span></div>
+        <div class="plama">
+          <span class="cichy"><b>prosty</b></span><span class="dymek">${V().prosty}</span>
+          <span class="cichy"><b>złożony</b></span><span class="dymek">${V().zlozony}</span>
+        </div>
+      </div>
+      <div class="os"><i style="left:16%"></i><i style="left:50%"></i><i style="left:84%"></i></div>
+      <div class="czasy-nazwy"><span class="etykieta">przeszły</span><span class="etykieta">teraźniejszy</span><span class="etykieta">przyszły</span></div>
+      <div class="rada"><span class="znak">Czas przyszły</span>
+        <p><b>prosty</b> — składa się z jednego wyrazu: <i>${V().prosty}</i></p>
+        <p><b>złożony</b> — składa się z dwóch wyrazów: <i>${V().zlozony}</i></p></div>` },
+
+  { tytul: 'Liczby', html: () => `${naglowek('LICZBY')}
+      <div class="liczby">
+        <div class="plama"><span class="dymek">${V().ter[0]}</span><span class="cichy">ja</span><span class="etykieta">pojedyncza</span></div>
+        <div class="plama"><span class="dymek">${V().ter[3]}</span><span class="cichy">my</span><span class="etykieta">mnoga</span></div>
+      </div>
+      <div class="rada"><p><b>pojedyncza</b> — jedna osoba, jedna rzecz</p><p><b>mnoga</b> — więcej niż jedna</p></div>` },
+
+  { tytul: 'Osoby', html: () => {
+      const z = [['ja', 'my'], ['ty', 'wy'], ['on, ona, ono', 'oni, one']];
+      return `${naglowek('OSOBY')}
+      <div class="osoby">
+        <span class="glowa">liczba pojedyncza</span><span class="glowa">liczba mnoga</span>
+        ${z.map(([p, m], i) => `<div class="kom plama"><span class="etykieta">${p}</span><span class="dymek">${V().ter[i]}</span></div>
+          <div class="kom plama"><span class="etykieta">${m}</span><span class="dymek">${V().ter[i + 3]}</span></div>`).join('')}
+      </div>`; } },
+
+  { tytul: 'Rodzaje', html: () => {
+      const r = V().rdzen;
+      const kom = (zaimek, konc, nazwa) => `<div class="kom plama"><span class="zaimek">${zaimek}</span>
+        <span class="dymek">${r}${konc}</span><span class="etykieta">${nazwa}</span></div>`;
+      return `${naglowek('RODZAJE')}
+      <div class="rodzaje">
+        <span class="cichy">liczba pojedyncza</span>
+        <div class="rzad" style="grid-template-columns:1fr 1fr 1fr">${kom('TEN', 'ł', 'męski')}${kom('TA', 'ła', 'żeński')}${kom('TO', 'ło', 'nijaki')}</div>
+        <span class="cichy">liczba mnoga</span>
+        <div class="rzad" style="grid-template-columns:1fr 1fr">${kom('CI', 'li', 'męskoosobowy')}${kom('TE', 'ły', 'niemęskoosobowy')}</div>
+      </div>
+      <div class="rada"><p><b>męskoosobowy</b> — gdy wśród nich jest chłopiec albo mężczyzna: <i>ci chłopcy ${r}li</i></p></div>`; } },
+];
+let krok = 0;
+
+function pokazEkran() {
+  const e = EKRANY[krok];
+  $('tytul').textContent = e.tytul;
+  $('kroki').textContent = `${krok + 1} / ${EKRANY.length}`;
+  $('lekcja').innerHTML = e.html();
+  $('lekcja').scrollTop = 0;
+  $('dalej').textContent = krok < EKRANY.length - 1 ? 'Dalej' : 'Do ćwiczenia';
+  const inny = $('inny');
+  if (inny) inny.onclick = () => { ic = (ic + 1) % LEKCJA_CZ.length; pokazEkran(); };
+  simScreen('lekcja ' + (krok + 1));
+}
+$('dalej').onclick = () => { if (krok < EKRANY.length - 1) { krok++; pokazEkran(); } else idz('cw'); };
+
+// ---- ćwiczenie ----
+// [forma, osoba, liczba, rodzaj, czas]; liczba p/m · rodzaj m ż n mo nmo · czas prz / ter / przy
+// tylko formy, w których widać rodzaj — jak w podręczniku (Lasha 29.09: bez „—", bez czasu teraźniejszego i przyszłego prostego)
+const ZADANIA = [
+  // podręcznik, zad. 2
+  ['byłam', 1, 'p', 'z', 'prz'], ['usiedliśmy', 1, 'm', 'mo', 'prz'], ['zbudowałyście', 2, 'm', 'nmo', 'prz'],
+  ['będą pisali', 3, 'm', 'mo', 'przy'], ['umyły', 3, 'm', 'nmo', 'prz'], ['stało', 3, 'p', 'n', 'prz'],
+  // z lekcji
+  ['przeczytaliśmy', 1, 'm', 'mo', 'prz'], ['robiłem', 1, 'p', 'm', 'prz'],
+  ['zrobiła', 3, 'p', 'z', 'prz'], ['zrobiło', 3, 'p', 'n', 'prz'], ['zrobili', 3, 'm', 'mo', 'prz'], ['zrobiły', 3, 'm', 'nmo', 'prz'],
+  // czas przeszły
+  ['pisałaś', 2, 'p', 'z', 'prz'], ['śpiewałeś', 2, 'p', 'm', 'prz'], ['tańczyłyśmy', 1, 'm', 'nmo', 'prz'],
+  ['biegaliście', 2, 'm', 'mo', 'prz'], ['narysowałem', 1, 'p', 'm', 'prz'], ['przyniosła', 3, 'p', 'z', 'prz'],
+  ['spało', 3, 'p', 'n', 'prz'], ['zbudowali', 3, 'm', 'mo', 'prz'], ['grałyście', 2, 'm', 'nmo', 'prz'],
+  ['zjadłyśmy', 1, 'm', 'nmo', 'prz'], ['wróciliście', 2, 'm', 'mo', 'prz'], ['zaśpiewałam', 1, 'p', 'z', 'prz'],
+  ['odrobiłeś', 2, 'p', 'm', 'prz'],
+  // czas przyszły złożony z -ł (będę pisała) — tu rodzaj widać
+  ['będziemy grali', 1, 'm', 'mo', 'przy'], ['będziecie tańczyły', 2, 'm', 'nmo', 'przy'],
+  ['będzie spała', 3, 'p', 'z', 'przy'], ['będzie pływał', 3, 'p', 'm', 'przy'], ['będę pisała', 1, 'p', 'z', 'przy'],
+  ['będą jechały', 3, 'm', 'nmo', 'przy'], ['będziesz pisał', 2, 'p', 'm', 'przy'], ['będzie świeciło', 3, 'p', 'n', 'przy'],
+];
+// kolumny tabeli z podręcznika; każdy wiersz przycisków to jeden rząd
+const GRUPY = [
+  // osoba bez numerów (Lasha 29.09): sześć zaimków, u góry pojedyncza, pod nią mnoga; wartość = osoba + liczba,
+  // dobra jest tylko ta jedna (byłam → ja), Liczba zostaje osobno
+  { k: 1, nazwa: 'Osoba',  rzedy: [[['1p', 'ja'], ['2p', 'ty'], ['3p', 'on, ona, ono']],
+                                   [['1m', 'my'], ['2m', 'wy'], ['3m', 'oni, one']]] },
+  { k: 2, nazwa: 'Liczba', rzedy: [[['p', 'pojedyncza'], ['m', 'mnoga']]] },
+  { k: 3, nazwa: 'Rodzaj', rzedy: [[['m', 'męski'], ['z', 'żeński'], ['n', 'nijaki']],
+                                   [['mo', 'męskoosobowy'], ['nmo', 'niemęskoosobowy']]] },
+  { k: 4, nazwa: 'Czas',   rzedy: [[['prz', 'przeszły'], ['ter', 'teraźniejszy'], ['przy', 'przyszły']]] },
+];
+// te same przyciski w Ćwiczeniu i w Treningu
+const grupyHtml = () => GRUPY.map(g => `<div class="grupa" data-k="${g.k}"><span>${g.nazwa}</span>
+  ${g.rzedy.map(r => `<div class="rzad">${r.map(([w, t]) => `<button class="btn opcja" data-w="${w}">${t}</button>`).join('')}</div>`).join('')}
+</div>`).join('');
+$('grupy').innerHTML = grupyHtml();
+
+let zad = null, wybor = {}, sprawdzone = false;
+const ostatnie = [];              // bez powtórek wśród ostatnich 10
+
+function noweZadanie() {
+  let i;
+  do i = Math.floor(Math.random() * ZADANIA.length); while (ostatnie.includes(i));
+  ostatnie.push(i); if (ostatnie.length > 10) ostatnie.shift();
+  zad = ZADANIA[i]; wybor = {}; sprawdzone = false;
+  $('cw-slowo').textContent = zad[0];
+  $('cw-podpis').textContent = 'Określ formę czasownika';
+  $('cw-karta').classList.remove('dobrze', 'zle');
+  $('grupy').querySelectorAll('.opcja').forEach(b => { b.className = 'btn opcja'; b.disabled = false; });
+  $('cw-sprawdz').textContent = 'Sprawdź';
+  $('cw-sprawdz').disabled = true;
+}
+
+$('grupy').addEventListener('click', e => {
+  const b = e.target.closest('.opcja');
+  if (!b || sprawdzone) return;
+  const g = b.closest('.grupa');
+  g.querySelectorAll('.opcja').forEach(x => x.classList.toggle('btn-neutral', x === b));
+  wybor[g.dataset.k] = b.dataset.w;
+  $('cw-sprawdz').disabled = Object.keys(wybor).length < GRUPY.length;
+});
+
+$('cw-sprawdz').onclick = () => {
+  if (sprawdzone) { Dzwiek.klik(); noweZadanie(); return; }
+  sprawdzone = true;
+  let wszystko = true;
+  $('grupy').querySelectorAll('.grupa').forEach(g => {
+    const k = g.dataset.k, dobra = k === '1' ? zad[1] + zad[2] : String(zad[k]);
+    if (wybor[k] !== dobra) wszystko = false;
+    g.querySelectorAll('.opcja').forEach(b => {
+      b.classList.remove('btn-neutral');
+      if (b.dataset.w === dobra) b.classList.add('btn-success');          // dobra odpowiedź — zawsze zielona
+      else if (b.dataset.w === wybor[k]) b.classList.add('btn-error');    // wybrana zła — czerwona
+      b.disabled = true;
+    });
+  });
+  $('cw-karta').classList.add(wszystko ? 'dobrze' : 'zle');
+  Dzwiek.ocena(wszystko);
+  $('cw-podpis').textContent = wszystko ? 'Dobrze!' : 'Popatrz, tak jest dobrze:';
+  $('cw-sprawdz').textContent = 'Dalej';
+  log(`${zad[0]}: ${wszystko ? 'dobrze' : 'źle'}`);
+};
+
+// ---- trening (Lasha 29.09): dotykasz przycisk — czasownik zmienia się od razu, bez „Sprawdź" ----
+// osoba i liczba połączone (ja + mnoga → my), rodzaj też (męskoosobowy → mnoga); nijaki tylko przy „ono"
+const BEDE = ['będę', 'będziesz', 'będzie', 'będziemy', 'będziecie', 'będą'];
+const tr = { os: 1, lp: 'p', rodz: 'm', czas: 'prz' };
+$('tr-grupy').innerHTML = grupyHtml();
+
+function trFormy() {
+  const v = V(), pien = v.przesz.slice(0, -3);                        // robiłem → robi
+  const przed = v.rdzen.slice(0, v.rdzen.length - pien.length);        // zrobi − robi → z (czas przyszły prosty)
+  const i = tr.os - 1 + (tr.lp === 'm' ? 3 : 0);
+  const zaimek = tr.lp === 'p' ? ['ja', 'ty', { m: 'on', z: 'ona', n: 'ono' }[tr.rodz]][tr.os - 1]
+                               : ['my', 'wy', { mo: 'oni', nmo: 'one' }[tr.rodz]][tr.os - 1];
+  const kon3 = { m: 'ł', z: 'ła', n: 'ło', mo: 'li', nmo: 'ły' }[tr.rodz];
+  const przesz = pien + (tr.lp === 'p'
+    ? (tr.os === 3 ? kon3 : { m: ['łem', 'łeś'], z: ['łam', 'łaś'] }[tr.rodz][tr.os - 1])
+    : { mo: ['liśmy', 'liście', 'li'], nmo: ['łyśmy', 'łyście', 'ły'] }[tr.rodz][tr.os - 1]);
+  return { zaimek, przesz, ter: v.ter[i], prosty: przed + v.ter[i], zlozony: BEDE[i] + ' ' + pien + kon3 };
+}
+
+function trLiczba(lp) {
+  if (lp === tr.lp) return;
+  tr.lp = lp;
+  tr.rodz = lp === 'm' ? (tr.rodz === 'm' ? 'mo' : 'nmo') : (tr.rodz === 'mo' ? 'm' : 'z');
+}
+function trUstaw(k, w) {
+  if (k === '1') {
+    const os = +w[0], lp = w[1];
+    // „on, ona, ono" / „oni, one" (Lasha 29.09): każde dotknięcie — następny zaimek; pierwsze zawsze „on" / „oni"
+    if (os === 3 && tr.os === 3 && lp === tr.lp) tr.rodz = { m: 'z', z: 'n', n: 'm', mo: 'nmo', nmo: 'mo' }[tr.rodz];
+    else if (os === 3) { tr.os = 3; tr.lp = lp; tr.rodz = lp === 'p' ? 'm' : 'mo'; }
+    else { tr.os = os; trLiczba(lp); }
+  }
+  if (k === '2') trLiczba(w);
+  if (k === '3') { tr.rodz = w; tr.lp = w === 'mo' || w === 'nmo' ? 'm' : 'p'; }
+  if (k === '4') tr.czas = w;
+  if (tr.rodz === 'n' && tr.os !== 3) tr.rodz = 'm';                   // nie ma „ja robiłom"
+}
+
+function trPokaz() {
+  const f = trFormy(), wyb = { 1: tr.os + tr.lp, 2: tr.lp, 3: tr.rodz, 4: tr.czas };
+  $('tr-grupy').querySelectorAll('.grupa').forEach(g =>
+    g.querySelectorAll('.opcja').forEach(b => b.classList.toggle('btn-neutral', b.dataset.w === wyb[g.dataset.k])));
+  $('tr-grupy').querySelector('[data-k="3"] [data-w="n"]').disabled = tr.os !== 3;
+  $('tr-grupy').querySelector('[data-k="3"]').classList.toggle('blada', tr.czas === 'ter');   // w teraźniejszym rodzaju nie widać
+  const linia = forma => `<b><span class="zaim">${f.zaimek}</span> ${forma}</b>`;
+  $('tr-karta').classList.toggle('dwa', tr.czas === 'przy');
+  $('tr-karta').innerHTML = tr.czas === 'przy'
+    ? `<small>prosty</small>${linia(f.prosty)}<small>złożony</small>${linia(f.zlozony)}`
+    : linia(tr.czas === 'prz' ? f.przesz : f.ter);
+  $('tr-inny').innerHTML = `${V().bezok} ${kosc}`;
+}
+$('tr-grupy').addEventListener('click', e => {
+  const b = e.target.closest('.opcja');
+  if (!b || b.disabled) return;
+  trUstaw(b.closest('.grupa').dataset.k, b.dataset.w);
+  trPokaz();
+});
+$('tr-inny').onclick = () => { ic = (ic + 1) % LEKCJA_CZ.length; trPokaz(); };
+
+// ---- ☰ menu (jak w Zegarze) ----
+const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const WIDOKI = [['start', 'Start'], ['lekcja', 'Lekcja'], ['tr', 'Trening'], ['cw', 'Ćwiczenie']];
+const DZWIEKI = [['tak', 'Włączone'], ['nie', 'Wyłączone']];
+let motywOtwarty = false;   // podmenu Motyw zostaje otwarte po wyborze (☰ przebudowuje się przy zmianie motywu)
+function zbudujMenu() {
+  const ul = $('menu-nawigacja');
+  ul.textContent = '';
+  WIDOKI.forEach(([w, nazwa]) => {
+    const li = h('li'), a = h('a', widok === w ? 'menu-active' : null, nazwa);
+    a.onclick = () => { $('menu').checked = false; if (w === 'lekcja') krok = 0; idz(w); };
+    li.append(a);
+    ul.append(li);
+  });
+  const liM = h('li', 'oddzielnie'), detM = h('details'), podM = h('ul');
+  detM.open = motywOtwarty;
+  detM.ontoggle = () => { motywOtwarty = detM.open; };
+  detM.append(h('summary', null, 'Motyw'), podM);
+  liM.append(detM);
+  ul.append(liM);
+  const obecny = document.documentElement.dataset.theme;
+  MOTYWY.forEach(([k, nazwa]) => {
+    const li = h('li'), a = h('a', k === obecny ? 'menu-active' : null, `<span class="probka" data-theme="${k}"></span>${nazwa}`);
+    a.onclick = () => { if (k !== obecny) ustawMotyw(k); };
+    li.append(a);
+    podM.append(li);
+  });
+  const box = $('u-dzwieki'), wybrana = Dzwiek.wlaczone ? 'tak' : 'nie';
+  box.textContent = '';
+  DZWIEKI.forEach(([k, nazwa]) => {
+    const b = h('button', 'join-item btn btn-sm' + (k === wybrana ? ' btn-primary' : ''), nazwa);
+    b.onclick = () => { if (k !== wybrana) { Dzwiek.wlacz(k === 'tak'); zbudujMenu(); } };
+    box.append(b);
+  });
+}
+function ustawMotyw(k) {
+  document.documentElement.dataset.theme = k;
+  try { localStorage.setItem('czasownik-theme', k); } catch (e) {}
+  log(`motyw: ${MOTYWY.find(([x]) => x === k)[1]}`);
+  zbudujMenu();
+}
+// motyw wybrany w symulatorze (sim-bridge ustawił już data-theme) — zaznaczenie w ☰ idzie za nim
+addEventListener('message', e => { if (e.data && e.data.type === 'theme') zbudujMenu(); });
+
+// ---- widoki ----
+let widok = 'start';
+function idz(w) {
+  widok = w;
+  ['start', 'lekcja', 'tr', 'cw'].forEach(x => $('widok-' + x).hidden = x !== w);
+  $('przycisk-start').hidden = w === 'start';
+  $('kroki').hidden = w !== 'lekcja';
+  zbudujMenu();
+  if (w === 'start') { $('tytul').textContent = 'Czasownik'; simScreen('start'); }
+  if (w === 'lekcja') pokazEkran();
+  if (w === 'tr') { $('tytul').textContent = 'Trening'; trPokaz(); simScreen('trening'); }
+  if (w === 'cw') { $('tytul').textContent = 'Ćwiczenie'; noweZadanie(); simScreen('ćwiczenie'); }
+}
+document.querySelectorAll('[data-idz]').forEach(b => b.onclick = () => { if (b.dataset.idz === 'lekcja') krok = 0; idz(b.dataset.idz); });
+$('przycisk-start').onclick = () => idz('start');
+// wstecz (symulator / telefon): w lekcji krok do tyłu, inaczej na Start
+window.simBack = () => { if (widok === 'lekcja' && krok > 0) { krok--; pokazEkran(); } else idz('start'); };
+
+// ?widok=lekcja&krok=3 · ?widok=tr · ?widok=cw — od razu dany ekran (do zdjęć w symulatorze)
+const q = new URLSearchParams(location.search);
+krok = Math.min(Math.max(+q.get('krok') - 1 || 0, 0), EKRANY.length - 1);
+idz(['lekcja', 'tr', 'cw'].includes(q.get('widok')) ? q.get('widok') : 'start');
+</script>
+</body>
+</html>
