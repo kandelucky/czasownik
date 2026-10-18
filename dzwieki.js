@@ -1,6 +1,6 @@
 // dzwieki.js — dźwięki aplikacji, przeniesione z Zegara (Lasha 29.09: „დაამატე ხმები").
 // Pliki z Numko (Matma-Robot/Audiof) w dzwieki/; gdy pliku brak — krótki generowany beep, jak w Numko.
-//   klik      — każdy przycisk i pozycja menu (sam, niżej); bez „Sprawdź" w Ćwiczeniu — ten ma dobrze / źle
+//   klik      — każdy przycisk i pozycja menu (sam, niżej); bez „Sprawdź" w Ćwiczeniu i kart w Równoważniku — te mają dobrze / źle
 //   ocena(b)  — dobra / zła odpowiedź po „Sprawdź"
 //   wlacz(b)  — ☰ „Dźwięki", pamiętane w localStorage 'czasownik-dzwieki'
 //   obrot     — nowy czasownik (Lasha 29.09): Dalej w Ćwiczeniu, 🎲 w Treningu i w lekcji — zamiast klik
@@ -106,6 +106,6 @@
     if (!wlaczone) return;
     ac();                                    // pierwsze dotknięcie budzi AudioContext — tik działa od pierwszego ruchu
     const b = e.target.closest('button, a, label.btn, summary');
-    if (b && !b.closest('#cw-sprawdz, #tr-inny, #inny')) Dzwiek.klik();
+    if (b && !b.closest('#cw-sprawdz, #tr-inny, #inny, #rw-karty, #rw-dalej')) Dzwiek.klik();
   });
 })();

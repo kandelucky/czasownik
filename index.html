@@ -54,6 +54,7 @@
   .lista-kafel.lekcje { --kolor: var(--color-success); --kolor-t: var(--color-success-content); }
   .lista-kafel.trening { --kolor: var(--color-info); --kolor-t: var(--color-info-content); }
   .lista-kafel.zdania { --kolor: var(--color-error); --kolor-t: var(--color-error-content); }   /* cegła — jak pomarańcz w podręczniku */
+  .lista-kafel.rownowaznik { --kolor: var(--color-accent); --kolor-t: var(--color-accent-content); }   /* bursztyn — jak karta „równoważnik zdania" */
   .lista-kafel:active { transform: scale(.97); }
   .kafel-ikona { flex: none; width: 60px; height: 60px; border-radius: 14px; display: grid; place-items: center;
                  background: var(--kolor); color: var(--kolor-t); }
@@ -184,6 +185,39 @@
   .zd-pole.zle { border-color: var(--color-error); background: color-mix(in oklab, var(--color-error) 22%, var(--color-base-100)); text-decoration: line-through; }
   /* po złej odpowiedzi: dobra forma tuż za skreśloną */
   .zd-dobra { margin-left: .25em; padding: 0 .3em; border-radius: .3em; font-weight: 800; background: var(--color-success); color: var(--color-success-content); }
+
+  /* ---- zdanie czy równoważnik (podręcznik s. 43, 45; Lasha 18.10) ---- zdanie — błękit, równoważnik — bursztyn
+     (nie czerwony i nie zielony: te mówią „źle" / „dobrze") */
+  .k-zd { --k: var(--color-info); --k-t: var(--color-info-content); }
+  .k-rw { --k: var(--color-accent); --k-t: var(--color-accent-content); }
+  .krol { padding: 0 .2em; border-radius: .3em; background: var(--color-info); color: var(--color-info-content); }   /* czasownik — „król zdania" */
+  /* lekcja: przykład w kolorze tego, czym jest wypowiedź */
+  .przyklad { width: 100%; max-width: 24rem; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 10px 12px;
+              border: 3px solid var(--k); border-radius: 16px; text-align: center; background: color-mix(in oklab, var(--k) 18%, var(--color-base-100)); }
+  .przyklad .etykieta { color: color-mix(in oklab, var(--k) 75%, var(--color-base-content)); }
+  .przyklad .zd-tekst { font-size: 26px; font-weight: 800; line-height: 1.25; }
+  .odstep { margin-top: auto; }
+  /* dwie karty: w lekcji przełączają przykład, w ćwiczeniu dotknięcie = odpowiedź */
+  .karty { width: 100%; max-width: 24rem; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .karta { position: relative; display: flex; align-items: center; justify-content: center; padding: 6px 8px; cursor: pointer;
+           border: 3px solid var(--k); border-radius: 16px; text-align: center; font: inherit; font-size: 19px; font-weight: 800; line-height: 1.15;
+           background: color-mix(in oklab, var(--k) 22%, var(--color-base-100)); color: var(--color-base-content);
+           box-shadow: 0 4px 0 color-mix(in oklab, var(--k) 70%, black); transition: transform .1s, opacity .2s; }
+  .karta:active:not(:disabled) { transform: translateY(2px); }
+  .karta:disabled { cursor: default; }
+  .karta.wlaczona { background: var(--k); color: var(--k-t); }
+  .karta.blady { opacity: .35; }
+  .karta .znaczek { position: absolute; top: 4px; right: 10px; font-size: 22px; }
+  .lek-karty { flex: none; height: 92px; }
+  /* ćwiczenie (wersja A1): ⓘ w prawym rogu nad kartami; karty 190 px, po odpowiedzi 124 px + Dalej — górna krawędź kart zostaje */
+  #rw-karta { overflow: hidden; }   /* wypowiedź wjeżdża z prawej, wyjeżdża w lewo — jak w Ćwiczeniu */
+  .rw-zdanie { margin: 6px 0 0; font-size: var(--r-przycisk); font-weight: 700; line-height: 1.35; }
+  .rw-nota { margin: 4px 0 0; font-size: 15px; color: var(--blada); }
+  .rw-dol { margin-top: auto; flex: none; width: 100%; max-width: 24rem; height: 220px; display: flex; flex-direction: column; gap: 6px; }
+  .rw-dol .info-rzad { flex: none; display: flex; justify-content: flex-end; }
+  .rw-dol .info { color: var(--color-primary); }
+  .rw-dol .karty { flex: 1; min-height: 0; }
+  #rw-dalej { flex: none; height: 56px; margin-top: 4px; font-size: var(--r-przycisk); }
 </style>
 </head>
 <body>
@@ -229,11 +263,17 @@
       <span class="tekst"><b>Zdania</b><small>Wpisz poprawną formę</small></span>
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
     </button>
+    <!-- waga — jak „Wypowiedzenia" w podręczniku, s. 43: zdanie i równoważnik zdania ważą tyle samo -->
+    <button class="lista-kafel rownowaznik" data-idz="rw">
+      <span class="kafel-ikona"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg></span>
+      <span class="tekst"><b>Równoważnik</b><small>Zdanie czy równoważnik zdania?</small></span>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
   </main>
 
   <main id="widok-lekcja" class="flex-1 min-h-0 flex flex-col px-4 pb-4" hidden>
     <div id="lekcja" class="flex-1 min-h-0 overflow-y-auto flex flex-col items-center gap-3 py-2"></div>
-    <!-- ‹ Wstecz · Dalej › (Lasha 18.10): równe połowy; na pierwszym ekranie Wstecz wyłączony, na ostatnim „Ćwiczenie ›" -->
+    <!-- ‹ Wstecz · Dalej › (Lasha 18.10): równe połowy; na pierwszym ekranie Wstecz wyłączony, na ostatnim „Ćwiczenie ›" → Równoważnik -->
     <div class="lek-nawigacja shrink-0 mt-2">
       <button id="wstecz" class="btn btn-outline"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>Wstecz</button>
       <button id="dalej" class="btn btn-primary"><span id="dalej-tekst">Dalej</span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
@@ -266,6 +306,26 @@
       </div>
       <button id="zd-sprawdz" class="btn btn-primary w-full max-w-sm shrink-0">Sprawdź</button>
     </form>
+  </main>
+
+  <!-- Równoważnik (podręcznik s. 45, zad. 2 i 3; Lasha 18.10, wersja A1): wypowiedź u góry, na dole dwie karty — dotknięcie = odpowiedź;
+       ⓘ otwiera ekran lekcji „Zdanie?" -->
+  <main id="widok-rw" class="flex-1 min-h-0 overflow-y-auto flex flex-col items-center gap-3 px-4 pt-2 pb-4" hidden>
+    <div class="zadanie" id="rw-karta">
+      <small id="rw-podpis">Co to jest?</small>
+      <p class="rw-zdanie" id="rw-zdanie"></p>
+      <p class="rw-nota" id="rw-nota" hidden></p>
+    </div>
+    <div class="rw-dol">
+      <div class="info-rzad"><button class="btn btn-ghost btn-circle btn-xs info" data-ekran="7" aria-label="Lekcja: Zdanie?">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      </button></div>
+      <div class="karty" id="rw-karty">
+        <button class="karta k-zd" data-w="zd">zdanie</button>
+        <button class="karta k-rw" data-w="rw">równoważnik zdania</button>
+      </div>
+      <button id="rw-dalej" class="btn btn-primary w-full" hidden>Dalej</button>
+    </div>
   </main>
   </div>
 
@@ -312,13 +372,33 @@ const LEKCJA_CZ = [
 let ic = 0;                       // który czasownik z LEKCJA_CZ
 const V = () => LEKCJA_CZ[ic];
 
-// ---- lekcja: 7 ekranów w kolejności podręcznika ----
+// ---- lekcja: 8 ekranów w kolejności podręcznika ----
 const kosc = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><g fill="currentColor" stroke="none"><circle cx="8" cy="8" r="1.5"/><circle cx="16" cy="8" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="8" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></g></svg>';
 const naglowek = (temat, przez = 'Czasownik odmienia się przez') => `<p class="lek-przez">${przez}</p><p class="lek-temat">${temat}</p>
   <div class="inny">Czasownik: <button class="btn btn-sm btn-outline rounded-full" id="inny">${V().bezok} ${kosc}</button></div>`;
 // komórka jak w Rodzajach: zaimek, forma w dymku, nazwa pod spodem
 const komorka = (zaimek, forma, nazwa) => `<div class="kom plama"><span class="zaimek">${zaimek}</span>
   <span class="dymek">${forma}</span><span class="etykieta">${nazwa}</span></div>`;
+
+// zdanie czy równoważnik (s. 43): pary [zdanie, czasownik w formie osobowej, równoważnik]; 🎲 — następna para
+const PARY = [
+  ['W taczce jest dziura.', 'jest', 'Dziura w taczce.'],
+  ['Pracujemy w ogrodzie.', 'Pracujemy', 'Praca w ogrodzie.'],
+  ['Maluję autoportret.', 'Maluję', 'Malowanie autoportretu.'],
+  ['W ogrodzie jest spokój.', 'jest', 'Spokój w ogrodzie.'],
+  ['Na biurku jest bałagan.', 'jest', 'Bałagan na biurku.'],
+  ['System uległ awarii.', 'uległ', 'Awaria systemu.'],
+];
+let ip = 0, lekRw = 'zd';         // która para · co pokazuje przykład: zdanie / równoważnik
+const krol = (zdanie, cz) => zdanie.replace(cz, `<span class="krol">${cz}</span>`);
+const notaZd = cz => `<b>${cz.toLowerCase()}</b> — czasownik w formie osobowej`;
+const NOTA_RW = 'brak czasownika w formie osobowej';
+const przyklad = () => {
+  const [zd, cz, rw] = PARY[ip];
+  return lekRw === 'zd'
+    ? `<div class="przyklad k-zd"><span class="etykieta">zdanie</span><span class="zd-tekst">${krol(zd, cz)}</span><span class="cichy">${notaZd(cz)}</span></div>`
+    : `<div class="przyklad k-rw"><span class="etykieta">równoważnik zdania</span><span class="zd-tekst">${rw}</span><span class="cichy">${NOTA_RW}</span></div>`;
+};
 
 const EKRANY = [
   { tytul: 'Zacznijmy od…', html: () => `
@@ -397,6 +477,18 @@ const EKRANY = [
       <div class="rada"><span class="znak">Należą do nich</span>
         <p><b>bezokolicznik</b> — podstawowa forma czasownika, kończy się na <b>-ć</b> lub <b>-c</b>: <i>${V().bezok}</i>, <i>biec</i></p>
         <p>formy zakończone na <b>-no</b>, <b>-to</b>: <i>${V().nieos}</i>, <i>umyto</i></p></div>` },
+
+  // podręcznik s. 43 (Lasha 18.10): karty na dole przełączają przykład — czasownik znika, zdanie staje się równoważnikiem;
+  // ten sam ekran otwiera ⓘ w Równoważniku
+  { tytul: 'Zdanie?', inny: () => { ip = (ip + 1) % PARY.length; lekRw = 'zd'; }, html: () => `
+      <p class="lek-przez">Czy każda wypowiedź jest</p><p class="lek-temat">ZDANIEM?</p>
+      <div class="inny">Przykład: <button class="btn btn-sm btn-outline rounded-full" id="inny">inny ${kosc}</button></div>
+      ${przyklad()}
+      <div class="rada"><span class="znak">Zapamiętaj</span>
+        <p><b>Zdanie</b> ma czasownik w formie osobowej. <b>Równoważnik zdania</b> go nie ma.</p></div>
+      <p class="wstep odstep">Dotknij karty i zobacz, co się zmieni:</p>
+      <div class="karty lek-karty">${[['zd', 'zdanie'], ['rw', 'równoważnik zdania']].map(([w, t]) =>
+        `<button class="karta k-${w} lek-karta${w === lekRw ? ' wlaczona' : ''}" data-w="${w}">${t}</button>`).join('')}</div>` },
 ];
 let krok = 0;
 
@@ -409,11 +501,21 @@ function pokazEkran() {
   $('wstecz').disabled = krok === 0;
   $('dalej-tekst').textContent = krok < EKRANY.length - 1 ? 'Dalej' : 'Ćwiczenie';
   const inny = $('inny');
-  if (inny) inny.onclick = () => { ic = (ic + 1) % LEKCJA_CZ.length; Dzwiek.obrot(); pokazEkran(); };
+  // 🎲: następny czasownik; na ekranie „Zdanie?" — następna para
+  if (inny) inny.onclick = () => { if (e.inny) e.inny(); else ic = (ic + 1) % LEKCJA_CZ.length; Dzwiek.obrot(); pokazEkran(); };
   simScreen('lekcja ' + (krok + 1));
 }
 $('wstecz').onclick = () => { if (krok > 0) { krok--; pokazEkran(); } };
-$('dalej').onclick = () => { if (krok < EKRANY.length - 1) { krok++; pokazEkran(); } else idz('cw'); };
+$('dalej').onclick = () => { if (krok < EKRANY.length - 1) { krok++; pokazEkran(); } else idz('rw'); };
+// karty „Zdanie?" — w lekcji i w oknie ⓘ: przykład zmienia się w zdanie / równoważnik
+document.addEventListener('click', e => {
+  const k = e.target.closest('.lek-karta');
+  if (!k || k.dataset.w === lekRw) return;
+  lekRw = k.dataset.w;
+  const box = k.closest('#lekcja, #okno-tresc');
+  box.querySelector('.przyklad').outerHTML = przyklad();
+  box.querySelectorAll('.lek-karta').forEach(x => x.classList.toggle('wlaczona', x === k));
+});
 
 // ---- ćwiczenie ----
 // [forma, osoba, liczba, rodzaj, czas]; liczba p/m · rodzaj m ż n mo nmo · czas prz / ter / przy
@@ -511,7 +613,7 @@ function gwiazdki(el, ile, zasieg) {
   }
 }
 function pokazSerie() {
-  $('seria').hidden = !['cw', 'zd'].includes(widok) || seria === 0;
+  $('seria').hidden = !['cw', 'zd', 'rw'].includes(widok) || seria === 0;
   $('seria').textContent = `★ ${seria}`;
 }
 // wspólne z Zdaniami: dobrze — ★ seria rośnie, karta podskakuje, podpis wyskakuje, gwiazdki
@@ -736,9 +838,66 @@ $('zd-forma').addEventListener('submit', e => {
   log(`${zdanie[1]}: „${wpis}" — ${dobrze ? 'dobrze' : 'źle'}`);
 });
 
+// ---- równoważnik (podręcznik s. 45, zad. 2 i 3; Lasha 18.10, wersja A1): zdanie czy równoważnik zdania? ----
+// [wypowiedź, czasownik w formie osobowej — null = równoważnik zdania]
+const RW_ZADANIA = [
+  // zad. 2
+  ['Spokój w ogrodzie.', null], ['Poczekasz na mnie?', 'Poczekasz'], ['Zrobiłem to!', 'Zrobiłem'],
+  ['Gramatyka opanowana.', null], ['Koniecznie to zapisz.', 'zapisz'], ['Deszcz padał cały dzień.', 'padał'],
+  ['Bałagan na biurku.', null],
+  // zad. 3
+  ['Słońce świeci.', 'świeci'], ['Piękna pogoda.', null], ['Spotkanie z koleżanką.', null], ['Zmykaj stąd!', 'Zmykaj'],
+  ['Co czytasz?', 'czytasz'], ['Jestem tutaj.', 'Jestem'], ['Kawa czy herbata?', null],
+];
+let rwZad = null, rwSprawdzone = false;
+const rwOstatnie = [];            // bez powtórek wśród ostatnich 6 (wypowiedzi jest 14)
+
+function noweRw() {
+  let i;
+  do i = Math.floor(Math.random() * RW_ZADANIA.length); while (rwOstatnie.includes(i));
+  rwOstatnie.push(i); if (rwOstatnie.length > 6) rwOstatnie.shift();
+  rwZad = RW_ZADANIA[i]; rwSprawdzone = false;
+  $('rw-zdanie').textContent = rwZad[0];
+  $('rw-nota').hidden = true;
+  $('rw-podpis').textContent = 'Co to jest?';
+  $('rw-karta').classList.remove('dobrze', 'zle');
+  $('rw-karty').querySelectorAll('.karta').forEach(k => { k.classList.remove('wlaczona', 'blady'); k.disabled = false; k.querySelector('.znaczek')?.remove(); });
+  $('rw-dalej').hidden = true;
+}
+
+// dotknięcie karty = odpowiedź: dobra karta pełna z ✓, druga blada (zła wybrana — z ✗); czasownik świeci na niebiesko
+$('rw-karty').addEventListener('click', e => {
+  const k = e.target.closest('.karta');
+  if (!k || rwSprawdzone) return;
+  rwSprawdzone = true;
+  const [tekst, cz] = rwZad, dobra = cz ? 'zd' : 'rw', dobrze = k.dataset.w === dobra;
+  $('rw-karty').querySelectorAll('.karta').forEach(x => {
+    const ta = x.dataset.w === dobra;
+    x.classList.toggle('wlaczona', ta);
+    x.classList.toggle('blady', !ta);
+    if (ta || x === k) x.insertAdjacentHTML('afterbegin', `<span class="znaczek">${ta ? '✓' : '✗'}</span>`);
+    x.disabled = true;
+  });
+  if (cz) $('rw-zdanie').innerHTML = krol(tekst, cz);
+  $('rw-nota').innerHTML = cz ? notaZd(cz) : NOTA_RW;
+  $('rw-nota').hidden = false;
+  $('rw-karta').classList.add(dobrze ? 'dobrze' : 'zle');
+  Dzwiek.ocena(dobrze);
+  $('rw-podpis').textContent = `${dobrze ? 'Dobrze! To jest' : 'Popatrz — to jest'} ${cz ? 'zdanie' : 'równoważnik zdania'}.`;
+  if (dobrze) pochwal($('rw-karta'), $('rw-podpis'));
+  else {
+    zgan($('rw-karta'));
+    $('rw-karty').querySelector('.wlaczona').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }],
+                                                    { duration: 500, delay: 300, easing: 'ease-in-out' });
+  }
+  $('rw-dalej').hidden = false;
+  log(`${tekst} ${dobrze ? 'dobrze' : 'źle'}`);
+});
+$('rw-dalej').onclick = () => zamien($('rw-zdanie'), noweRw);
+
 // ---- ☰ menu (jak w Zegarze) ----
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
-const WIDOKI = [['start', 'Start'], ['lekcja', 'Lekcja'], ['tr', 'Trening'], ['cw', 'Ćwiczenie'], ['zd', 'Zdania']];
+const WIDOKI = [['start', 'Start'], ['lekcja', 'Lekcja'], ['tr', 'Trening'], ['cw', 'Ćwiczenie'], ['zd', 'Zdania'], ['rw', 'Równoważnik']];
 const DZWIEKI = [['tak', 'Włączone'], ['nie', 'Wyłączone']];
 let motywOtwarty = false;   // podmenu Motyw zostaje otwarte po wyborze (☰ przebudowuje się przy zmianie motywu)
 function zbudujMenu() {
@@ -784,26 +943,27 @@ addEventListener('message', e => { if (e.data && e.data.type === 'theme') zbuduj
 let widok = 'start';
 function idz(w) {
   widok = w;
-  ['start', 'lekcja', 'tr', 'cw', 'zd'].forEach(x => $('widok-' + x).hidden = x !== w);
+  ['start', 'lekcja', 'tr', 'cw', 'zd', 'rw'].forEach(x => $('widok-' + x).hidden = x !== w);
   $('przycisk-start').hidden = w === 'start';
   $('kroki').hidden = w !== 'lekcja';
   zbudujMenu();
-  if (w !== 'cw' && w !== 'zd') $('seria').hidden = true;
+  if (!['cw', 'zd', 'rw'].includes(w)) $('seria').hidden = true;
   if (w === 'start') { $('tytul').textContent = 'Czasownik'; simScreen('start'); }
   if (w === 'lekcja') pokazEkran();
   if (w === 'tr') { $('tytul').textContent = 'Trening'; trPoprz = null; trPokaz(); simScreen('trening'); }
   if (w === 'cw') { $('tytul').textContent = 'Ćwiczenie'; seria = 0; pokazSerie(); noweZadanie(); simScreen('ćwiczenie'); }
   if (w === 'zd') { $('tytul').textContent = 'Zdania'; seria = 0; pokazSerie(); noweZdanie(); simScreen('zdania'); }
+  if (w === 'rw') { $('tytul').textContent = 'Równoważnik'; seria = 0; pokazSerie(); noweRw(); simScreen('równoważnik'); }
 }
 document.querySelectorAll('[data-idz]').forEach(b => b.onclick = () => { if (b.dataset.idz === 'lekcja') krok = 0; idz(b.dataset.idz); });
 $('przycisk-start').onclick = () => idz('start');
 // wstecz (symulator / telefon): w lekcji krok do tyłu, inaczej na Start
 window.simBack = () => { if ($('okno').open) $('okno').close(); else if (widok === 'lekcja' && krok > 0) { krok--; pokazEkran(); } else idz('start'); };
 
-// ?widok=lekcja&krok=3 · ?widok=tr · ?widok=cw · ?widok=zd — od razu dany ekran (do zdjęć w symulatorze)
+// ?widok=lekcja&krok=3 · ?widok=tr · ?widok=cw · ?widok=zd · ?widok=rw — od razu dany ekran (do zdjęć w symulatorze)
 const q = new URLSearchParams(location.search);
 krok = Math.min(Math.max(+q.get('krok') - 1 || 0, 0), EKRANY.length - 1);
-idz(['lekcja', 'tr', 'cw', 'zd'].includes(q.get('widok')) ? q.get('widok') : 'start');
+idz(['lekcja', 'tr', 'cw', 'zd', 'rw'].includes(q.get('widok')) ? q.get('widok') : 'start');
 </script>
 </body>
 </html>
