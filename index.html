@@ -53,6 +53,7 @@
                  color: inherit; font: inherit; transition: transform .1s; }
   .lista-kafel.lekcje { --kolor: var(--color-success); --kolor-t: var(--color-success-content); }
   .lista-kafel.trening { --kolor: var(--color-info); --kolor-t: var(--color-info-content); }
+  .lista-kafel.zdania { --kolor: var(--color-error); --kolor-t: var(--color-error-content); }   /* cegła — jak pomarańcz w podręczniku */
   .lista-kafel:active { transform: scale(.97); }
   .kafel-ikona { flex: none; width: 60px; height: 60px; border-radius: 14px; display: grid; place-items: center;
                  background: var(--kolor); color: var(--kolor-t); }
@@ -79,6 +80,8 @@
   /* ---- lekcja ---- */
   #lekcja { justify-content: safe center; }
   #widok-lekcja .btn { font-size: var(--r-przycisk); }
+  .lek-nawigacja { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .lek-nawigacja .btn { padding-inline: 8px; }   /* „Ćwiczenie ›" mieści się w połowie ekranu 360px */
   .lek-przez { margin: 0; text-align: center; font-size: var(--r-drobny); font-weight: 700; color: var(--blada); }
   .lek-temat { margin: -4px 0 0; font-size: var(--r-glowny); font-weight: 800; letter-spacing: .14em; line-height: 1.2;
                background: linear-gradient(transparent 62%, var(--plama) 62%); padding: 0 .15em; }
@@ -118,6 +121,7 @@
   /* Liczby */
   .liczby { width: 100%; max-width: 24rem; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .liczby > div { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 6px 12px; }
+  .liczby .cichy { text-align: center; line-height: 1.2; }   /* Formy nieosobowe: podpis w dwóch wierszach */
 
   /* Osoby: 3 wiersze, liczba pojedyncza | liczba mnoga; bez numerów 1. 2. 3. (Lasha 29.09) */
   .osoby { width: 100%; max-width: 24rem; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 6px; align-items: stretch; }
@@ -154,7 +158,7 @@
   .opcja:not(.btn-neutral, .btn-success, .btn-error) { --btn-color: var(--color-base-100); }
   .opcja:disabled { opacity: 1; }
   .opcja.btn-success:disabled, .opcja.btn-error:disabled { background: var(--btn-color); color: var(--btn-fg); border-color: var(--btn-color); }
-  #cw-sprawdz { font-size: var(--r-przycisk); }
+  #cw-sprawdz, #zd-sprawdz { font-size: var(--r-przycisk); }
   #cw-karta { overflow: hidden; }   /* czasownik wjeżdża z prawej, wyjeżdża w lewo — nie wystaje poza kartę */
   /* gwiazdki z karty po dobrej odpowiedzi — fixed, na body: nie przewijają ekranu */
   .gwiazda { position: fixed; z-index: 50; pointer-events: none; line-height: 1; color: var(--color-warning); }
@@ -169,6 +173,17 @@
   .zmiana { display: inline-block; white-space: pre; color: color-mix(in oklab, var(--color-accent) 80%, var(--color-base-content));
             animation: podskok .4s ease-out; }
   @keyframes podskok { 0% { transform: scale(.5); opacity: 0; } 60% { transform: scale(1.25); opacity: 1; } 100% { transform: scale(1); } }
+
+  /* ---- zdania ---- zdanie z luką; pole rośnie razem z wpisanym słowem */
+  #zd-karta { overflow: hidden; }   /* zdanie wjeżdża z prawej, wyjeżdża w lewo — jak czasownik w Ćwiczeniu */
+  .zd-zdanie { margin: 6px 0 0; font-size: var(--r-przycisk); font-weight: 600; line-height: 1.7; }
+  .zd-pole { width: 5ch; max-width: 100%; padding: 0 .3em; font: inherit; font-weight: 800; text-align: center; color: inherit;
+             background: var(--color-base-200); border: 0; border-bottom: 3px solid var(--color-primary); border-radius: .3em .3em 0 0;
+             outline: 0; user-select: text; -webkit-user-select: text; }
+  .zd-pole.dobrze { border-color: var(--color-success); background: color-mix(in oklab, var(--color-success) 30%, var(--color-base-100)); }
+  .zd-pole.zle { border-color: var(--color-error); background: color-mix(in oklab, var(--color-error) 22%, var(--color-base-100)); text-decoration: line-through; }
+  /* po złej odpowiedzi: dobra forma tuż za skreśloną */
+  .zd-dobra { margin-left: .25em; padding: 0 .3em; border-radius: .3em; font-weight: 800; background: var(--color-success); color: var(--color-success-content); }
 </style>
 </head>
 <body>
@@ -209,11 +224,20 @@
       <span class="tekst"><b>Ćwiczenie</b><small>Określ formę czasownika</small></span>
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
     </button>
+    <button class="lista-kafel zdania" data-idz="zd">
+      <span class="kafel-ikona"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/></svg></span>
+      <span class="tekst"><b>Zdania</b><small>Wpisz poprawną formę</small></span>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
   </main>
 
   <main id="widok-lekcja" class="flex-1 min-h-0 flex flex-col px-4 pb-4" hidden>
     <div id="lekcja" class="flex-1 min-h-0 overflow-y-auto flex flex-col items-center gap-3 py-2"></div>
-    <button id="dalej" class="btn btn-primary w-full shrink-0 mt-2">Dalej</button>
+    <!-- ‹ Wstecz · Dalej › (Lasha 18.10): równe połowy; na pierwszym ekranie Wstecz wyłączony, na ostatnim „Ćwiczenie ›" -->
+    <div class="lek-nawigacja shrink-0 mt-2">
+      <button id="wstecz" class="btn btn-outline"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>Wstecz</button>
+      <button id="dalej" class="btn btn-primary"><span id="dalej-tekst">Dalej</span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+    </div>
   </main>
 
   <!-- Trening (Lasha 29.09): te same przyciski co w Ćwiczeniu, czasownik zmienia się od razu -->
@@ -231,6 +255,17 @@
     </div>
     <div class="grupy" id="grupy"></div>
     <button id="cw-sprawdz" class="btn btn-primary w-full max-w-sm shrink-0">Sprawdź</button>
+  </main>
+
+  <!-- Zdania (podręcznik, zad. 4; Lasha 18.10): zdanie z luką, dziecko wpisuje formę czasownika z nawiasu; Enter = Sprawdź -->
+  <main id="widok-zd" class="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-4" hidden>
+    <form id="zd-forma" class="flex flex-col items-center gap-3" autocomplete="off">
+      <div class="zadanie" id="zd-karta">
+        <small id="zd-podpis">Wpisz poprawną formę</small>
+        <p class="zd-zdanie" id="zd-zdanie"><span id="zd-przed"></span><input id="zd-pole" class="zd-pole" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" aria-label="Forma czasownika"><span id="zd-dobra" class="zd-dobra" hidden></span><span id="zd-po"></span></p>
+      </div>
+      <button id="zd-sprawdz" class="btn btn-primary w-full max-w-sm shrink-0">Sprawdź</button>
+    </form>
   </main>
   </div>
 
@@ -261,25 +296,29 @@ const $ = id => document.getElementById(id);
 
 // ---- czasowniki w lekcji (🎲 zmienia je na wszystkich ekranach naraz) ----
 // ter: czas teraźniejszy ja · ty · on · my · wy · oni; rdzen + ł / ła / ło / li / ły = czas przeszły dokonany (Rodzaje)
+// nieos: forma nieosobowa na -no (Formy nieosobowe)
 const LEKCJA_CZ = [
   { bezok: 'robić',   ter: ['robię', 'robisz', 'robi', 'robimy', 'robicie', 'robią'],
-    przesz: 'robiłem', prosty: 'zrobię', zlozony: 'będę robić', rdzen: 'zrobi' },
+    przesz: 'robiłem', prosty: 'zrobię', zlozony: 'będę robić', rdzen: 'zrobi', nieos: 'zrobiono' },
   { bezok: 'pisać',   ter: ['piszę', 'piszesz', 'pisze', 'piszemy', 'piszecie', 'piszą'],
-    przesz: 'pisałem', prosty: 'napiszę', zlozony: 'będę pisać', rdzen: 'napisa' },
+    przesz: 'pisałem', prosty: 'napiszę', zlozony: 'będę pisać', rdzen: 'napisa', nieos: 'napisano' },
   { bezok: 'czytać',  ter: ['czytam', 'czytasz', 'czyta', 'czytamy', 'czytacie', 'czytają'],
-    przesz: 'czytałem', prosty: 'przeczytam', zlozony: 'będę czytać', rdzen: 'przeczyta' },
+    przesz: 'czytałem', prosty: 'przeczytam', zlozony: 'będę czytać', rdzen: 'przeczyta', nieos: 'przeczytano' },
   { bezok: 'śpiewać', ter: ['śpiewam', 'śpiewasz', 'śpiewa', 'śpiewamy', 'śpiewacie', 'śpiewają'],
-    przesz: 'śpiewałem', prosty: 'zaśpiewam', zlozony: 'będę śpiewać', rdzen: 'zaśpiewa' },
+    przesz: 'śpiewałem', prosty: 'zaśpiewam', zlozony: 'będę śpiewać', rdzen: 'zaśpiewa', nieos: 'zaśpiewano' },
   { bezok: 'rysować', ter: ['rysuję', 'rysujesz', 'rysuje', 'rysujemy', 'rysujecie', 'rysują'],
-    przesz: 'rysowałem', prosty: 'narysuję', zlozony: 'będę rysować', rdzen: 'narysowa' },
+    przesz: 'rysowałem', prosty: 'narysuję', zlozony: 'będę rysować', rdzen: 'narysowa', nieos: 'narysowano' },
 ];
 let ic = 0;                       // który czasownik z LEKCJA_CZ
 const V = () => LEKCJA_CZ[ic];
 
-// ---- lekcja: 5 ekranów w kolejności podręcznika ----
+// ---- lekcja: 7 ekranów w kolejności podręcznika ----
 const kosc = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><g fill="currentColor" stroke="none"><circle cx="8" cy="8" r="1.5"/><circle cx="16" cy="8" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="8" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/></g></svg>';
-const naglowek = temat => `<p class="lek-przez">Czasownik odmienia się przez</p><p class="lek-temat">${temat}</p>
+const naglowek = (temat, przez = 'Czasownik odmienia się przez') => `<p class="lek-przez">${przez}</p><p class="lek-temat">${temat}</p>
   <div class="inny">Czasownik: <button class="btn btn-sm btn-outline rounded-full" id="inny">${V().bezok} ${kosc}</button></div>`;
+// komórka jak w Rodzajach: zaimek, forma w dymku, nazwa pod spodem
+const komorka = (zaimek, forma, nazwa) => `<div class="kom plama"><span class="zaimek">${zaimek}</span>
+  <span class="dymek">${forma}</span><span class="etykieta">${nazwa}</span></div>`;
 
 const EKRANY = [
   { tytul: 'Zacznijmy od…', html: () => `
@@ -323,19 +362,41 @@ const EKRANY = [
 
   { tytul: 'Rodzaje', html: () => {
       const r = V().rdzen;
-      const kom = (zaimek, konc, nazwa) => `<div class="kom plama"><span class="zaimek">${zaimek}</span>
-        <span class="dymek">${r}${konc}</span><span class="etykieta">${nazwa}</span></div>`;
       return `${naglowek('RODZAJE')}
       <div class="rodzaje">
         <span class="cichy">liczba pojedyncza</span>
-        <div class="rzad" style="grid-template-columns:1fr 1fr 1fr">${kom('TEN', 'ł', 'męski')}${kom('TA', 'ła', 'żeński')}${kom('TO', 'ło', 'nijaki')}</div>
+        <div class="rzad" style="grid-template-columns:1fr 1fr 1fr">${komorka('TEN', r + 'ł', 'męski')}${komorka('TA', r + 'ła', 'żeński')}${komorka('TO', r + 'ło', 'nijaki')}</div>
         <span class="cichy">liczba mnoga</span>
-        <div class="rzad" style="grid-template-columns:1fr 1fr">${kom('CI', 'li', 'męskoosobowy')}${kom('TE', 'ły', 'niemęskoosobowy')}</div>
+        <div class="rzad" style="grid-template-columns:1fr 1fr">${komorka('CI', r + 'li', 'męskoosobowy')}${komorka('TE', r + 'ły', 'niemęskoosobowy')}</div>
       </div>
       <div class="rada"><span class="znak">Liczba mnoga — zapytaj</span>
         <p><b>Czy jest wśród nich chłopiec albo mężczyzna?</b></p>
         <p><b>Tak</b> → męskoosobowy: <i>oni ${r}li</i><br><span class="cichy">chłopcy · mama i tata</span></p>
         <p><b>Nie</b> → niemęskoosobowy: <i>one ${r}ły</i><br><span class="cichy">dziewczynki · psy · drzewa · dzieci</span></p></div>`; } },
+
+  // podręcznik s. 42 (Lasha 18.10): chłopiec i dziewczynka mówią tak samo; porównanie z czasem przeszłym — spoza podręcznika
+  { tytul: 'Nie widać rodzaju', html: () => {
+      const t = V().ter, pien = V().przesz.slice(0, -3);              // robiłem → robi
+      return `${naglowek('RODZAJ', 'Nie zawsze da się określić')}
+      <div class="rodzaje">
+        <div class="rzad" style="grid-template-columns:1fr 1fr">${komorka('JA', t[0], 'chłopiec')}${komorka('JA', t[0], 'dziewczynka')}</div>
+        <div class="rzad" style="grid-template-columns:1fr 1fr 1fr">${komorka('ON', t[2], 'męski')}${komorka('ONA', t[2], 'żeński')}${komorka('ONO', t[2], 'nijaki')}</div>
+      </div>
+      <div class="rada"><span class="znak">Zapamiętaj</span>
+        <p>Zarówno dziewczynka, jak i chłopiec powiedzą tak samo: <i>(ja) ${t[0]}</i>, <i>(on, ona, ono) ${t[2]}</i>.</p>
+        <p>W czasie przeszłym rodzaj widać:<br><i>${pien}łem</i> <span class="cichy">chłopiec</span> · <i>${pien}łam</i> <span class="cichy">dziewczynka</span></p></div>`; } },
+
+  // podręcznik s. 42 (Lasha 18.10): osobowa — da się określić osobę; nieosobowa — bezokolicznik (-ć, -c) i formy na -no, -to
+  { tytul: 'Formy nieosobowe', html: () => `${naglowek('NIEOSOBOWE', 'Formy osobowe i')}
+      <div class="liczby">
+        <div class="plama"><span class="etykieta">osobowa</span><span class="dymek">${V().ter[0]}</span>
+          <span class="cichy">da się określić osobę: <b>ja</b></span></div>
+        <div class="plama"><span class="etykieta">nieosobowa</span><span class="dymek">${V().bezok}</span><span class="dymek">${V().nieos}</span>
+          <span class="cichy">nie da się określić osoby</span></div>
+      </div>
+      <div class="rada"><span class="znak">Należą do nich</span>
+        <p><b>bezokolicznik</b> — podstawowa forma czasownika, kończy się na <b>-ć</b> lub <b>-c</b>: <i>${V().bezok}</i>, <i>biec</i></p>
+        <p>formy zakończone na <b>-no</b>, <b>-to</b>: <i>${V().nieos}</i>, <i>umyto</i></p></div>` },
 ];
 let krok = 0;
 
@@ -345,11 +406,13 @@ function pokazEkran() {
   $('kroki').textContent = `${krok + 1} / ${EKRANY.length}`;
   $('lekcja').innerHTML = e.html();
   $('lekcja').scrollTop = 0;
-  $('dalej').textContent = krok < EKRANY.length - 1 ? 'Dalej' : 'Do ćwiczenia';
+  $('wstecz').disabled = krok === 0;
+  $('dalej-tekst').textContent = krok < EKRANY.length - 1 ? 'Dalej' : 'Ćwiczenie';
   const inny = $('inny');
   if (inny) inny.onclick = () => { ic = (ic + 1) % LEKCJA_CZ.length; Dzwiek.obrot(); pokazEkran(); };
   simScreen('lekcja ' + (krok + 1));
 }
+$('wstecz').onclick = () => { if (krok > 0) { krok--; pokazEkran(); } };
 $('dalej').onclick = () => { if (krok < EKRANY.length - 1) { krok++; pokazEkran(); } else idz('cw'); };
 
 // ---- ćwiczenie ----
@@ -448,26 +511,44 @@ function gwiazdki(el, ile, zasieg) {
   }
 }
 function pokazSerie() {
-  $('seria').hidden = widok !== 'cw' || seria === 0;
+  $('seria').hidden = !['cw', 'zd'].includes(widok) || seria === 0;
   $('seria').textContent = `★ ${seria}`;
+}
+// wspólne z Zdaniami: dobrze — ★ seria rośnie, karta podskakuje, podpis wyskakuje, gwiazdki
+function pochwal(karta, podpis) {
+  seria++;
+  pokazSerie();
+  $('seria').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.5)' }, { transform: 'scale(1)' }], { duration: 400, easing: 'ease-out' });
+  karta.animate([{ transform: 'none' }, { transform: 'translateY(-8px) scale(1.06)' }, { transform: 'scale(.98)' }, { transform: 'none' }],
+                { duration: 450, easing: 'ease-out' });
+  podpis.animate([{ transform: 'scale(.5)', opacity: 0 }, { transform: 'scale(1.3)', opacity: 1, offset: .6 }, { transform: 'scale(1)' }],
+                 { duration: 400, easing: 'ease-out' });
+  if (seria % 5 === 0) { gwiazdki(karta, 36, 170); setTimeout(Dzwiek.brawo, 350); }
+  else gwiazdki(karta, 14, 110);
+}
+// źle — seria od zera, karta kręci „nie"
+function zgan(karta) {
+  seria = 0;
+  pokazSerie();
+  karta.animate([0, -12, 10, -8, 6, -3, 0].map(x => ({ transform: `translateX(${x}px)` })), { duration: 450, easing: 'ease-out' });
+}
+// Dalej — stare w lewo, nowe z prawej
+function zamien(el, nowe) {
+  if (jedzie) return;
+  jedzie = true;
+  Dzwiek.obrot();
+  const wyjazd = el.animate([{ transform: 'translateX(0)', opacity: 1 }, { transform: 'translateX(-70px)', opacity: 0 }],
+                            { duration: 180, easing: 'ease-in', fill: 'forwards' });
+  wyjazd.finished.then(() => {
+    nowe();
+    wyjazd.cancel();
+    el.animate([{ transform: 'translateX(70px)', opacity: 0 }, { transform: 'translateX(0)', opacity: 1 }], { duration: 250, easing: 'ease-out' });
+    jedzie = false;
+  });
 }
 
 $('cw-sprawdz').onclick = () => {
-  if (sprawdzone) {
-    if (jedzie) return;
-    jedzie = true;
-    Dzwiek.obrot();
-    const el = $('cw-slowo');
-    const wyjazd = el.animate([{ transform: 'translateX(0)', opacity: 1 }, { transform: 'translateX(-70px)', opacity: 0 }],
-                              { duration: 180, easing: 'ease-in', fill: 'forwards' });
-    wyjazd.finished.then(() => {
-      noweZadanie();
-      wyjazd.cancel();
-      el.animate([{ transform: 'translateX(70px)', opacity: 0 }, { transform: 'translateX(0)', opacity: 1 }], { duration: 250, easing: 'ease-out' });
-      jedzie = false;
-    });
-    return;
-  }
+  if (sprawdzone) { zamien($('cw-slowo'), noweZadanie); return; }
   sprawdzone = true;
   let wszystko = true;
   $('grupy').querySelectorAll('.grupa').forEach(g => {
@@ -483,20 +564,9 @@ $('cw-sprawdz').onclick = () => {
   $('cw-karta').classList.add(wszystko ? 'dobrze' : 'zle');
   Dzwiek.ocena(wszystko);
   $('cw-podpis').textContent = wszystko ? 'Dobrze!' : 'Popatrz, tak jest dobrze:';
-  if (wszystko) {
-    seria++;
-    pokazSerie();
-    $('seria').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.5)' }, { transform: 'scale(1)' }], { duration: 400, easing: 'ease-out' });
-    $('cw-karta').animate([{ transform: 'none' }, { transform: 'translateY(-8px) scale(1.06)' }, { transform: 'scale(.98)' }, { transform: 'none' }],
-                          { duration: 450, easing: 'ease-out' });
-    $('cw-podpis').animate([{ transform: 'scale(.5)', opacity: 0 }, { transform: 'scale(1.3)', opacity: 1, offset: .6 }, { transform: 'scale(1)' }],
-                           { duration: 400, easing: 'ease-out' });
-    if (seria % 5 === 0) { gwiazdki($('cw-karta'), 36, 170); setTimeout(Dzwiek.brawo, 350); }
-    else gwiazdki($('cw-karta'), 14, 110);
-  } else {
-    seria = 0;
-    pokazSerie();
-    $('cw-karta').animate([0, -12, 10, -8, 6, -3, 0].map(x => ({ transform: `translateX(${x}px)` })), { duration: 450, easing: 'ease-out' });
+  if (wszystko) pochwal($('cw-karta'), $('cw-podpis'));
+  else {
+    zgan($('cw-karta'));
     $('grupy').querySelectorAll('.btn-success').forEach(b =>
       b.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 500, delay: 300, easing: 'ease-in-out' }));
   }
@@ -577,9 +647,98 @@ $('tr-grupy').addEventListener('click', e => {
 });
 $('tr-inny').onclick = () => { ic = (ic + 1) % LEKCJA_CZ.length; Dzwiek.obrot(); trPoprz = null; trPokaz(); };
 
+// ---- zdania (podręcznik, zad. 4; Lasha 18.10): wpisz formę czasownika z nawiasu ----
+// [zdanie, „_" = luka · dobra forma · inne dobre formy]; pierwszą pokazujemy po złej odpowiedzi
+// zdania spoza podręcznika mają słowo czasu (wczoraj · teraz · jutro), żeby dobra była jedna forma
+const ZDANIA = [
+  // podręcznik, zad. 4
+  ['Moi koledzy teraz już (umieć) _ poprawnie odmieniać czasowniki.', 'umieją'],
+  ['Rodzice nie (rozumieć) _ mojej miłości do gier komputerowych.', 'rozumieją', 'rozumieli'],
+  ['Tylko ja dobrze (rozumieć) _, o co chodzi mojemu psu.', 'rozumiem'],
+  ['Ja jeszcze nie (umieć) _ wszystkiego na sprawdzian z matematyki.', 'umiem'],
+  ['Wczoraj Piotr (wziąć) _ udział w turnieju tenisa.', 'wziął'],
+  ['Marianna nie (wziąć) _ dzisiaj do szkoły piórnika.', 'wzięła', 'weźmie'],
+  ['Spóźniłem się na pierwszą lekcję, ponieważ rano (wyjść) _ z psem.', 'wyszedłem'],
+  // czas przeszły — wszystkie osoby i rodzaje
+  ['Wczoraj chłopcy (grać) _ w piłkę.', 'grali'],
+  ['Wczoraj dziewczynki (tańczyć) _ na scenie.', 'tańczyły'],
+  ['Wczoraj mama i tata (pojechać) _ do kina.', 'pojechali'],
+  ['Wczoraj dziecko (płakać) _ całą noc.', 'płakało'],
+  ['Kasiu, czy ty wczoraj (rysować) _ kota?', 'rysowałaś'],
+  ['Tomku, czy ty wczoraj (czytać) _ tę książkę?', 'czytałeś'],
+  ['Ola: — Ja wczoraj (narysować) _ konia.', 'narysowałam'],
+  ['Tomek: — Ja wczoraj (zjeść) _ całą pizzę.', 'zjadłem'],
+  ['My, chłopcy, wczoraj (budować) _ zamek z piasku.', 'budowaliśmy'],
+  ['Dziewczynki, czy wy wczoraj (śpiewać) _ w chórze?', 'śpiewałyście'],
+  // czas teraźniejszy
+  ['Teraz mama (czytać) _ gazetę.', 'czyta'],
+  ['Teraz my (pisać) _ dyktando.', 'piszemy'],
+  ['Co ty teraz (robić) _?', 'robisz'],
+  ['Teraz koty (spać) _ na kanapie.', 'śpią'],
+  // czas przyszły; złożony — obie formy dobre
+  ['Jutro my (pojechać) _ nad morze.', 'pojedziemy'],
+  ['Jutro Ola (napisać) _ list do babci.', 'napisze'],
+  ['Jutro dzieci (grać) _ w piłkę.', 'będą grać', 'będą grały'],
+  ['W sobotę tata (gotować) _ obiad.', 'będzie gotować', 'będzie gotował'],
+];
+// porównanie: bez wielkich liter i zbędnych spacji; „bez ogonków" — do podpowiedzi „Prawie!" (wzial → wziął)
+const norm = s => s.trim().toLowerCase().replace(/\s+/g, ' ');
+const bezOgonkow = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l');
+let zdanie = null, zdSprawdzone = false;
+const zdOstatnie = [];            // bez powtórek wśród ostatnich 10
+
+function noweZdanie() {
+  let i;
+  do i = Math.floor(Math.random() * ZDANIA.length); while (zdOstatnie.includes(i));
+  zdOstatnie.push(i); if (zdOstatnie.length > 10) zdOstatnie.shift();
+  zdanie = ZDANIA[i]; zdSprawdzone = false;
+  const [przed, po] = zdanie[0].split('_');
+  $('zd-przed').textContent = przed;
+  $('zd-po').textContent = po;
+  $('zd-dobra').hidden = true;
+  $('zd-podpis').textContent = 'Wpisz poprawną formę';
+  $('zd-karta').classList.remove('dobrze', 'zle');
+  const pole = $('zd-pole');
+  pole.value = ''; pole.className = 'zd-pole'; pole.readOnly = false; pole.style.width = '';
+  $('zd-sprawdz').textContent = 'Sprawdź';
+  $('zd-sprawdz').disabled = true;
+  pole.focus();
+}
+$('zd-pole').addEventListener('input', () => {
+  const pole = $('zd-pole');
+  pole.style.width = Math.max(5, pole.value.length + 2) + 'ch';
+  $('zd-sprawdz').disabled = !pole.value.trim();
+});
+// Sprawdź i Dalej to jeden przycisk; Enter na klawiaturze — to samo
+$('zd-forma').addEventListener('submit', e => {
+  e.preventDefault();
+  if (zdSprawdzone) { zamien($('zd-zdanie'), noweZdanie); return; }
+  const pole = $('zd-pole'), wpis = norm(pole.value), dobre = zdanie.slice(1);
+  if (!wpis) return;
+  zdSprawdzone = true;
+  const dobrze = dobre.includes(wpis);
+  pole.readOnly = true;
+  pole.classList.add(dobrze ? 'dobrze' : 'zle');
+  $('zd-karta').classList.add(dobrze ? 'dobrze' : 'zle');
+  Dzwiek.ocena(dobrze);
+  if (dobrze) {
+    $('zd-podpis').textContent = 'Dobrze!';
+    pochwal($('zd-karta'), $('zd-podpis'));
+  } else {
+    const blisko = dobre.find(d => bezOgonkow(d) === bezOgonkow(wpis));
+    $('zd-podpis').textContent = blisko ? 'Prawie! Popatrz na ogonki:' : 'Popatrz, tak jest dobrze:';
+    $('zd-dobra').textContent = blisko ?? dobre[0];
+    $('zd-dobra').hidden = false;
+    zgan($('zd-karta'));
+  }
+  $('zd-sprawdz').textContent = 'Dalej';
+  $('zd-sprawdz').focus();        // klawiatura się chowa; Enter — Dalej
+  log(`${zdanie[1]}: „${wpis}" — ${dobrze ? 'dobrze' : 'źle'}`);
+});
+
 // ---- ☰ menu (jak w Zegarze) ----
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
-const WIDOKI = [['start', 'Start'], ['lekcja', 'Lekcja'], ['tr', 'Trening'], ['cw', 'Ćwiczenie']];
+const WIDOKI = [['start', 'Start'], ['lekcja', 'Lekcja'], ['tr', 'Trening'], ['cw', 'Ćwiczenie'], ['zd', 'Zdania']];
 const DZWIEKI = [['tak', 'Włączone'], ['nie', 'Wyłączone']];
 let motywOtwarty = false;   // podmenu Motyw zostaje otwarte po wyborze (☰ przebudowuje się przy zmianie motywu)
 function zbudujMenu() {
@@ -625,25 +784,26 @@ addEventListener('message', e => { if (e.data && e.data.type === 'theme') zbuduj
 let widok = 'start';
 function idz(w) {
   widok = w;
-  ['start', 'lekcja', 'tr', 'cw'].forEach(x => $('widok-' + x).hidden = x !== w);
+  ['start', 'lekcja', 'tr', 'cw', 'zd'].forEach(x => $('widok-' + x).hidden = x !== w);
   $('przycisk-start').hidden = w === 'start';
   $('kroki').hidden = w !== 'lekcja';
   zbudujMenu();
-  if (w !== 'cw') $('seria').hidden = true;
+  if (w !== 'cw' && w !== 'zd') $('seria').hidden = true;
   if (w === 'start') { $('tytul').textContent = 'Czasownik'; simScreen('start'); }
   if (w === 'lekcja') pokazEkran();
   if (w === 'tr') { $('tytul').textContent = 'Trening'; trPoprz = null; trPokaz(); simScreen('trening'); }
   if (w === 'cw') { $('tytul').textContent = 'Ćwiczenie'; seria = 0; pokazSerie(); noweZadanie(); simScreen('ćwiczenie'); }
+  if (w === 'zd') { $('tytul').textContent = 'Zdania'; seria = 0; pokazSerie(); noweZdanie(); simScreen('zdania'); }
 }
 document.querySelectorAll('[data-idz]').forEach(b => b.onclick = () => { if (b.dataset.idz === 'lekcja') krok = 0; idz(b.dataset.idz); });
 $('przycisk-start').onclick = () => idz('start');
 // wstecz (symulator / telefon): w lekcji krok do tyłu, inaczej na Start
 window.simBack = () => { if ($('okno').open) $('okno').close(); else if (widok === 'lekcja' && krok > 0) { krok--; pokazEkran(); } else idz('start'); };
 
-// ?widok=lekcja&krok=3 · ?widok=tr · ?widok=cw — od razu dany ekran (do zdjęć w symulatorze)
+// ?widok=lekcja&krok=3 · ?widok=tr · ?widok=cw · ?widok=zd — od razu dany ekran (do zdjęć w symulatorze)
 const q = new URLSearchParams(location.search);
 krok = Math.min(Math.max(+q.get('krok') - 1 || 0, 0), EKRANY.length - 1);
-idz(['lekcja', 'tr', 'cw'].includes(q.get('widok')) ? q.get('widok') : 'start');
+idz(['lekcja', 'tr', 'cw', 'zd'].includes(q.get('widok')) ? q.get('widok') : 'start');
 </script>
 </body>
 </html>
